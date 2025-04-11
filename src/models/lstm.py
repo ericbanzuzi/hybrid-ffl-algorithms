@@ -6,15 +6,14 @@ from torchinfo import summary
 
 class ShakespeareLSTM(nn.Module):
         """
-        Recurrent Neural Network (RNN) with LSTM units.
+        Recurrent Neural Network (RNN) with LSTM units based on https://arxiv.org/pdf/1812.01097
 
-        Attributes:
-        - vocab size (int): Size of the output vocabulary.
-        - embed_dim (int): Dimensionality of the embeddings.
-        - hidden_dim (int): Number of features in the hidden state.
-        - num_layers (int): Number of recurrent layers.
+        :vocab_size: Size of the output vocabulary
+        :embed_dim: Dimensionality of the embeddings
+        :hidden_dim: Number of features in the hidden state
+        :num_layers: Number of recurrent layers
         """
-        def __init__(self, vocab_size=80, embed_dim=8, hidden_dim=512, num_layers=2):
+        def __init__(self, vocab_size: int = 80, embed_dim: int = 8, hidden_dim: int = 512, num_layers: int = 2):
             super().__init__()
             self.vocab_size = vocab_size
             self.hidden_dim = hidden_dim

@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,12 +6,12 @@ from torchinfo import summary
 
 class CNN(nn.Module):
     """
-    Simple CNN model
-    Arguments:
-        in_channels (int): number of input channels.
-        num_classes (int): number of output classes.
+    Simple CNN model based on https://arxiv.org/pdf/1602.05629
+
+    :in_channels: Number of input channels
+    :num_classes: Number of output classes
     """
-    def __init__(self, num_classes=10, dataset=None):
+    def __init__(self, num_classes: int = 10, dataset: str = None):
         super().__init__()
         in_channels = 3 if 'MNIST' not in dataset else 1
         self.conv1 = nn.Conv2d(in_channels, 32, 5, padding='same')
@@ -32,7 +31,7 @@ class CNN(nn.Module):
     
 
 if __name__ == '__main__':
-    model = CNN(num_classes=10, dataset='CIFAR')
+    model = CNN(num_classes=10, dataset='CIFAR10')
     summary(model, input_size=(1, 3, 32, 32))
 
     print()
