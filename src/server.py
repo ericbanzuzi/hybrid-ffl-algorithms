@@ -40,11 +40,17 @@ def server_fn(context: Context):
         "initial_parameters": parameters,
     }
     
+    agg_strategy = context.run_config.get("agg-strategy", "fedavg")
     # Define the strategy
-    if context.run_config["cli-strategy"] == "fedprox":
+    if agg_strategy == "fedprox":
         strategy = FedProx(
             **base_kwargs,
-            proximal_mu=context.run_config["proximal-mu"]
+            proximal_mu=context.run_config["proximal-mu"],
+        )
+    elif agg_strategy == "adafed":
+        strategy = AdaFedStrategy(
+            **base_kwargs,
+            proximal_mu=context.run_config["proximal-mu"],
         )
     else:
         strategy = FedAvg(**base_kwargs)

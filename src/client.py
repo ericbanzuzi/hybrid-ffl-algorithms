@@ -8,7 +8,7 @@ from src.models.cnn import CNN
 
 # Define Flower Client
 class FlowerClient(NumPyClient):
-    def __init__(self, trainloader, valloader, local_epochs, learning_rate, dataset, strategy=None):
+    def __init__(self, trainloader, valloader, local_epochs, learning_rate, dataset, strategy):
         self.net = CNN(dataset=dataset)
         self.trainloader = trainloader
         self.valloader = valloader
@@ -53,7 +53,7 @@ def client_fn(context: Context):
     local_epochs = context.run_config["local-epochs"]
     learning_rate = context.run_config["learning-rate"]
     dataset = context.run_config["dataset"]
-    cli_strategy = context.run_config["cli-strategy"]
+    cli_strategy = context.run_config.get("cli-strategy", "fedavg")
 
     # Return Client instance
     return FlowerClient(trainloader, valloader, local_epochs, learning_rate, dataset, cli_strategy).to_client()

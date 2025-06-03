@@ -32,6 +32,7 @@ fraction-evaluate = 0.1
 learning-rate = 0.1
 batch-size = 32
 dataset = "cifar10"
+agg-strategy = "fedprox"
 cli-strategy = "fedprox"
 proximal-mu = 0.5
 

@@ -52,7 +52,7 @@ def compute_convex_combination(ortho_grads: np.ndarray):
 
 
 # Custom AdaFed Strategy
-class AdaFedStrategy2(fl.server.strategy.FedAvg):
+class AdaFedStrategy2(fl.server.strategy.FedProx):
     def __init__(self, eta: float = 1.0, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.eta = eta
@@ -95,7 +95,7 @@ class AdaFedStrategy2(fl.server.strategy.FedAvg):
         return self.current_parameters, {}
     
 
-class AdaFedStrategy(fl.server.strategy.FedAvg):
+class AdaFedStrategy(fl.server.strategy.FedProx):
     """Custom AdaFed strategy computing pseudo-gradients."""
 
     def __init__(self, gamma: float = 1.0, eta: float = 1, *args, **kwargs):
