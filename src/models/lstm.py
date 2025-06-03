@@ -5,37 +5,37 @@ from torchinfo import summary
 
 
 class ShakespeareLSTM(nn.Module):
-        """
-        Recurrent Neural Network (RNN) with LSTM units based on https://arxiv.org/pdf/1812.01097
+    """
+    Recurrent Neural Network (RNN) with LSTM units based on https://arxiv.org/pdf/1812.01097
 
-        :vocab_size: Size of the output vocabulary
-        :embed_dim: Dimensionality of the embeddings
-        :hidden_dim: Number of features in the hidden state
-        :num_layers: Number of recurrent layers
-        """
-        def __init__(self, vocab_size: int = 80, embed_dim: int = 8, hidden_dim: int = 256, num_layers: int = 2):
-            super().__init__()
-            self.vocab_size = vocab_size
-            self.hidden_dim = hidden_dim
-            self.num_layers = num_layers
-            self.embed_dim = embed_dim
+    :vocab_size: Size of the output vocabulary
+    :embed_dim: Dimensionality of the embeddings
+    :hidden_dim: Number of features in the hidden state
+    :num_layers: Number of recurrent layers
+    """
+    def __init__(self, vocab_size: int = 80, embed_dim: int = 8, hidden_dim: int = 256, num_layers: int = 2):
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.embed_dim = embed_dim
 
-            self.embedding = nn.Embedding(vocab_size, embed_dim)
-            # LSTM Layer with 2 layers of 256 units each
-            self.lstm = nn.LSTM(
-                input_size=embed_dim,
-                hidden_size=hidden_dim,
-                num_layers=num_layers,
-                batch_first=True
-            )
-            self.fc = nn.Linear(hidden_dim, vocab_size)
-        
-        def forward(self, x):
-            embed = self.embedding(x)
-            out, hidden = self.lstm(embed)
-            final_hidden_state = out[:, -1, :]  # Shape: (batch_size, hidden_size)
-            logits = self.fc(final_hidden_state)
-            return logits, hidden  # logit shape: (batch_size, 1, vocab_size)
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        # LSTM Layer with 2 layers of 256 units each
+        self.lstm = nn.LSTM(
+            input_size=embed_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True
+        )
+        self.fc = nn.Linear(hidden_dim, vocab_size)
+    
+    def forward(self, x):
+        embed = self.embedding(x)
+        out, hidden = self.lstm(embed)
+        final_hidden_state = out[:, -1, :]  # Shape: (batch_size, hidden_size)
+        logits = self.fc(final_hidden_state)
+        return logits, hidden  # logit shape: (batch_size, 1, vocab_size)
         
 
 class ShakespeareLSTM2(nn.Module):
