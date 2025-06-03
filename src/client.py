@@ -2,7 +2,8 @@ import torch
 from flwr.client import ClientApp, NumPyClient
 from flwr.common import Context
 
-from src.utils.task import get_weights, load_data, set_weights, test, train
+from src.utils.task import get_weights, set_weights, test, train
+from src.utils.dataset import load_data
 from src.models.cnn import CNN
 
 
