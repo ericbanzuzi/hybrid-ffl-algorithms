@@ -18,22 +18,30 @@ dependencies = [
 packages = ["."]
 
 [tool.flwr.app]
-publisher = "ericbanzuzi"
+publisher = "ebanzuzi"
 
 [tool.flwr.app.components]
-serverapp = "src.server_app:app"
-clientapp = "src.client_app:app"
+serverapp = "src.server:app"
+clientapp = "src.client:app"
 
 [tool.flwr.app.config]
 num-server-rounds = 3
-fraction-fit = 0.5
+fraction-fit = 0.1
 local-epochs = 1
-fraction-evaluate = 1
+fraction-evaluate = 0.1
 learning-rate = 0.1
 batch-size = 32
+dataset = "cifar10"
+cli-strategy = "fedprox"
+proximal-mu = 0.5
 
 [tool.flwr.federations]
 default = "local-simulation"
 
 [tool.flwr.federations.local-simulation]
 options.num-supernodes = 10
+
+[tool.flwr.federations.local-simulation-gpu]
+options.num-supernodes = 10
+options.backend.client-resources.num-cpus = 2 # each ClientApp assumes to use 2CPUs
+options.backend.client-resources.num-gpus = 0.2 # at most 5 ClientApp will run in a given GPU

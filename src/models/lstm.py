@@ -22,7 +22,12 @@ class ShakespeareLSTM(nn.Module):
 
             self.embedding = nn.Embedding(vocab_size, embed_dim)
             # LSTM Layer with 2 layers of 256 units each
-            self.lstm = nn.LSTM(embed_dim, hidden_dim, num_layers=num_layers, batch_first=True)
+            self.lstm = nn.LSTM(
+                input_size=embed_dim,
+                hidden_size=hidden_dim,
+                num_layers=num_layers,
+                batch_first=True
+            )
             self.fc = nn.Linear(hidden_dim, vocab_size)
         
         def forward(self, x):

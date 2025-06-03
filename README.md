@@ -1,6 +1,8 @@
 # dml-algorithms
 
-# Federated Learning with PyTorch and Flower (Quickstart Example)
+# Federated Learning with PyTorch and Flower
+
+TODO: description
 
 This introductory example to Flower uses PyTorch, but deep knowledge of PyTorch is not necessarily required to run the example. However, it will help you understand how to adapt Flower to your use case. Running this example in itself is quite easy. This example uses [Flower Datasets](https://flower.ai/docs/datasets/) to download, partition and preprocess the CIFAR-10 dataset.
 
@@ -8,25 +10,49 @@ This introductory example to Flower uses PyTorch, but deep knowledge of PyTorch 
 
 ### Clone the project
 
-This will create a new directory called `quickstart-pytorch` with the following structure:
+This will create a new directory called `dml-algorithms` with the following structure:
 
 ```shell
 dml-algorithms
 ├── src
 │   ├── __init__.py
-│   ├── client_app.py   # Defines your ClientApp
-│   ├── server_app.py   # Defines your ServerApp
-│   └── task.py         # Defines your model, training and data loading
+│   ├── client.py   # Defines your ClientApp
+│   ├── server.py   # Defines your ServerApp
+│   ├── models
+│   │   ├── lstm.py
+│   │   └── cnn.py
+│   ├── strategy
+│   │   └── adafed.py
+│   └── utils
+│       └── task.py         # Defines functions for training and data loading
 ├── pyproject.toml      # Project metadata like dependencies and configs
 └── README.md
 ```
 
+### Create a virtual environment
+
+Using Python: 
+```bash
+python3.11 -m venv .venv
+```
+
+Using conda:
+```bash
+conda create --name fl-env python=3.11
+```
+
 ### Install dependencies and project
 
-Install the dependencies defined in `pyproject.toml` as well as the `pytorchexample` package.
+Install the dependencies defined in `pyproject.toml`:
 
 ```bash
 pip install -e .
+```
+
+Or alternatively:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Run the project
@@ -55,9 +81,6 @@ Run the project in the `local-simulation-gpu` federation that gives CPU and GPU 
 # Run with the `local-simulation-gpu` federation
 flwr run . local-simulation-gpu
 ```
-
-> \[!TIP\]
-> For a more detailed walk-through check our [quickstart PyTorch tutorial](https://flower.ai/docs/framework/tutorial-quickstart-pytorch.html)
 
 ### Run with the Deployment Engine
 

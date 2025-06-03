@@ -1,5 +1,3 @@
-"""pytorchexample: A Flower / PyTorch app."""
-
 from collections import OrderedDict
 
 import torch
@@ -9,27 +7,6 @@ from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import IidPartitioner
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor
-
-
-class Net(nn.Module):
-    """Model (simple CNN adapted from 'PyTorch: A 60 Minute Blitz')"""
-
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
 
 
 def get_weights(net):
@@ -75,23 +52,43 @@ def load_data(partition_id: int, num_partitions: int, batch_size: int):
     return trainloader, testloader
 
 
-def train(net, trainloader, valloader, epochs, learning_rate, device):
+def train(net, trainloader, valloader, epochs, learning_rate, device, prox_mu, cli_strategy = 'fedavg'):
     """Train the model on the training set."""
+    if cli_strategy == 'fedprox':
+        global_params = [p.clone().detach() for p in net.parameters()]
+    else:
+        pass
+
     net.to(device)  # move model to GPU if available
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
     net.train()
+
+    total_loss = 0, 
     for _ in range(epochs):
+        total_loss = 0
         for batch in trainloader:
             images = batch["img"]
             labels = batch["label"]
             optimizer.zero_grad()
-            criterion(net(images.to(device)), labels.to(device)).backward()
-            optimizer.step()
 
+            if cli_strategy == 'fedprox':
+                proximal_term = 0.0
+                for local_weights, global_weights in zip(net.parameters(), global_params):
+                    proximal_term += (local_weights - global_weights).norm(2)
+                loss = criterion(net(images.to(device)), labels) + (prox_mu / 2) * proximal_term
+            else:
+                loss = criterion(net(images.to(device)), labels.to(device))
+            
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+
+    train_loss = total_loss / len(trainloader)
     val_loss, val_acc = test(net, valloader, device)
 
     results = {
+        "train_loss": train_loss,
         "val_loss": val_loss,
         "val_accuracy": val_acc,
     }

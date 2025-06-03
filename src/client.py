@@ -1,25 +1,26 @@
-"""pytorchexample: A Flower / PyTorch app."""
-
 import torch
 from flwr.client import ClientApp, NumPyClient
 from flwr.common import Context
 
-from src.task import Net, get_weights, load_data, set_weights, test, train
+from src.utils.task import get_weights, load_data, set_weights, test, train
+from src.models.cnn import CNN
 
 
 # Define Flower Client
 class FlowerClient(NumPyClient):
-    def __init__(self, trainloader, valloader, local_epochs, learning_rate):
-        self.net = Net()
+    def __init__(self, trainloader, valloader, local_epochs, learning_rate, dataset, strategy=None):
+        self.net = CNN(dataset=dataset)
         self.trainloader = trainloader
         self.valloader = valloader
         self.local_epochs = local_epochs
         self.lr = learning_rate
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.strategy = strategy or "fedavg"
 
     def fit(self, parameters, config):
         """Train the model with data of this client."""
         set_weights(self.net, parameters)
+        prox_mu = config.get("proximal_mu", 0.0)
         results = train(
             self.net,
             self.trainloader,
@@ -27,6 +28,8 @@ class FlowerClient(NumPyClient):
             self.local_epochs,
             self.lr,
             self.device,
+            prox_mu,
+            self.strategy
         )
         return get_weights(self.net), len(self.trainloader.dataset), results
 
@@ -49,9 +52,11 @@ def client_fn(context: Context):
     trainloader, valloader = load_data(partition_id, num_partitions, batch_size)
     local_epochs = context.run_config["local-epochs"]
     learning_rate = context.run_config["learning-rate"]
+    dataset = context.run_config["dataset"]
+    cli_strategy = context.run_config["cli-strategy"]
 
     # Return Client instance
-    return FlowerClient(trainloader, valloader, local_epochs, learning_rate).to_client()
+    return FlowerClient(trainloader, valloader, local_epochs, learning_rate, dataset, cli_strategy).to_client()
 
 
 # Flower ClientApp
