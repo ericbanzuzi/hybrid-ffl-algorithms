@@ -4,3 +4,4 @@ flwr-datasets[vision]==0.5.0
 torchvision==0.17.2
 ray==2.10
 hydra
+wandb

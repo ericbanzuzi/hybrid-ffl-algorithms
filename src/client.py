@@ -5,12 +5,13 @@ from flwr.common import Context
 from src.utils.task import get_weights, set_weights, test, train
 from src.utils.dataset import load_data
 from src.models.cnn import CNN
+from src.models.lstm import ShakespeareLSTM
 
 
 # Define Flower Client
 class FlowerClient(NumPyClient):
-    def __init__(self, trainloader, valloader, local_epochs, learning_rate, dataset, strategy):
-        self.net = CNN(dataset=dataset)
+    def __init__(self, trainloader, valloader, local_epochs, learning_rate, strategy, dataset = "cifar10", net_type = "CNN"):
+        self.net = CNN(dataset=dataset) if net_type.lower() == "cnn" else ShakespeareLSTM()
         self.trainloader = trainloader
         self.valloader = valloader
         self.local_epochs = local_epochs
@@ -57,7 +58,7 @@ def client_fn(context: Context):
     cli_strategy = context.run_config.get("cli-strategy", "fedavg")
 
     # Return Client instance
-    return FlowerClient(trainloader, valloader, local_epochs, learning_rate, dataset, cli_strategy).to_client()
+    return FlowerClient(trainloader, valloader, local_epochs, learning_rate, cli_strategy, dataset).to_client()
 
 
 # Flower ClientApp

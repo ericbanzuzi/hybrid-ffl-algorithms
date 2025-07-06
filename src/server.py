@@ -8,13 +8,14 @@ from flwr.server.strategy import FedAvg, FedProx
 
 from src.utils.task import get_weights
 from src.models.cnn import CNN
+from src.models.lstm import ShakespeareLSTM
 from src.strategy.adafed import AdaFedStrategy
 
 
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Multiply accuracy of each client by number of examples used
-    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
+    accuracies = [num_examples * metric["accuracy"] for num_examples, metric in metrics]
     examples = [num_examples for num_examples, _ in metrics]
 
     # Aggregate and return custom metric (weighted average)
@@ -27,9 +28,12 @@ def server_fn(context: Context):
     # Read from config
     num_rounds = context.run_config["num-server-rounds"]
     dataset = context.run_config["dataset"]
+    agg_strategy = context.run_config.get("agg-strategy", "fedavg")
+    model_type = context.run_config.get("model", "CNN").lower()
     
     # Initialize model parameters
-    ndarrays = get_weights(CNN(dataset=dataset))
+    model = CNN(dataset=dataset) if model_type == 'cnn' else ShakespeareLSTM()
+    ndarrays = get_weights(model)
     parameters = ndarrays_to_parameters(ndarrays)
 
     base_kwargs = {
@@ -40,7 +44,6 @@ def server_fn(context: Context):
         "initial_parameters": parameters,
     }
     
-    agg_strategy = context.run_config.get("agg-strategy", "fedavg")
     # Define the strategy
     if agg_strategy == "fedprox":
         strategy = FedProx(
