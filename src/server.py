@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 from flwr.common import Context, Metrics, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
-from flwr.server.strategy import FedAvg, FedProx
+from flwr.server.strategy import FedAvg, FedProx, FedAdam, FedYogi
 
 from src.utils.task import get_weights
 from src.models.cnn import CNN
@@ -59,8 +59,12 @@ def server_fn(context: Context):
             **base_kwargs,
             proximal_mu=context.run_config["proximal-mu"],
         )
+    elif agg_strategy == "fedadam":
+        strategy = FedAdam(**base_kwargs)
+    elif agg_strategy == "fedyogi":
+        strategy = FedYogi(**base_kwargs)
     else:
-        strategy = FedAvg(**base_kwargs)
+        strategy = FedYogi(**base_kwargs)
     
     config = ServerConfig(num_rounds=num_rounds)
 

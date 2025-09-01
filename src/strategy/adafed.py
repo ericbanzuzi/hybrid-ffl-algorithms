@@ -103,10 +103,10 @@ class AdaFedStrategy(FedProx):
         # Minimum norm element
         d_t = self.compute_convex_combination(orthograds)
 
-        for i in range(min(3, len(orthograds))):
-            for j in range(i+1, min(3, len(orthograds))):
-                cosine = np.dot(orthograds[i], orthograds[j]) / (np.linalg.norm(orthograds[i]) * np.linalg.norm(orthograds[j]))
-                print(f"Cosine between orthograd {i} and {j}: {cosine}")
+        # for i in range(min(3, len(orthograds))):
+        #     for j in range(i+1, min(3, len(orthograds))):
+        #         cosine = np.dot(orthograds[i], orthograds[j]) / (np.linalg.norm(orthograds[i]) * np.linalg.norm(orthograds[j]))
+        #         print(f"Cosine between orthograd {i} and {j}: {cosine}")
         
         # print(f"Gradient shape: {gradients_matrix.shape}")
         # print(f"d_t norm: {np.linalg.norm(d_t)}")
