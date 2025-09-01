@@ -67,6 +67,7 @@ def train(net, trainloader, valloader, epochs, learning_rate, device, prox_mu, c
                     total_personal_loss += personal_loss.item()
             
             elif cli_strategy == 'fedprox':
+                # FedProx with proximal term to global model
                 optimizer.zero_grad()
                 
                 proximal_term = 0.0
@@ -78,7 +79,8 @@ def train(net, trainloader, valloader, epochs, learning_rate, device, prox_mu, c
                 optimizer.step()
                 total_loss += loss.item()
             
-            else:  # FedAvg
+            else:
+                # FedAvg (Default)
                 optimizer.zero_grad()
                 loss = criterion(net(images.to(device)), labels)
                 loss.backward()

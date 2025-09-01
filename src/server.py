@@ -30,6 +30,8 @@ def server_fn(context: Context):
     dataset = context.run_config["dataset"]
     agg_strategy = context.run_config.get("agg-strategy", "fedavg")
     model_type = context.run_config.get("model", "CNN").lower()
+    use_yogi = context.run_config.get("yogi-server", 0) == 1
+    use_adam = context.run_config.get("adam-server", 0) == 1
     
     # Initialize model parameters
     model = CNN(dataset=dataset) if model_type == 'cnn' else ShakespeareLSTM()
@@ -52,6 +54,8 @@ def server_fn(context: Context):
         )
     elif agg_strategy == "adafed":
         strategy = AdaFedStrategy(
+            use_yogi=use_yogi,
+            use_adam=use_adam,
             **base_kwargs,
             proximal_mu=context.run_config["proximal-mu"],
         )

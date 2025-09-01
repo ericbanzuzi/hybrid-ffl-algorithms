@@ -29,21 +29,23 @@ num-server-rounds = 3
 fraction-fit = 0.1
 local-epochs = 1
 fraction-evaluate = 0.1
-learning-rate = 0.1
+learning-rate = 0.00005
 batch-size = 32
 dataset = "cifar10"
-agg-strategy = "fedprox"
-cli-strategy = "fedprox"
+agg-strategy = "adafed"
+cli-strategy = "fedavg"
 proximal-mu = 0.5
 model = "CNN"
+yogi-server = 0
+adam-server = 1
 
 [tool.flwr.federations]
 default = "local-simulation"
 
 [tool.flwr.federations.local-simulation]
-options.num-supernodes = 10
+options.num-supernodes = 10  # number of clients
 
 [tool.flwr.federations.local-simulation-gpu]
-options.num-supernodes = 10
+options.num-supernodes = 10  # number of clients
 options.backend.client-resources.num-cpus = 2 # each ClientApp assumes to use 2CPUs
 options.backend.client-resources.num-gpus = 0.2 # at most 5 ClientApp will run in a given GPU
