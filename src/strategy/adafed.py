@@ -19,21 +19,26 @@ from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 
-# Modified Gram-Schmidt from earlier
+
+# Modified Gram-Schmidt from https://arxiv.org/abs/2401.04993, step 1
 def modified_gram_schmidt(gradients: np.ndarray, losses: np.ndarray, gamma: float = 1.0):
     K, D = gradients.shape
     ortho_grads = np.zeros_like(gradients)
 
-    for k in range(K):
+    # Eq. 5
+    ortho_grads[0] = gradients[0] / (np.abs(losses[0]) ** gamma)
+
+    # Eq. 6
+    for k in range(1, K):
         gk = gradients[k]
         fk_gamma = np.abs(losses[k]) ** gamma
 
-        proj = np.zeros_like(gk)
+        proj_sum = np.zeros_like(gk)
         for i in range(k):
-            gi = ortho_grads[i]
-            proj += (np.dot(gk, gi) / np.dot(gi, gi)) * gi
+            gi_tilde = ortho_grads[i]
+            proj_sum += (np.dot(gk, gi_tilde) / np.dot(gi_tilde, gi_tilde)) * gi_tilde
 
-        numerator = gk - proj
+        numerator = gk - proj_sum
         denominator = fk_gamma - sum(
             np.dot(gk, ortho_grads[i]) / np.dot(ortho_grads[i], ortho_grads[i]) for i in range(k)
         )
@@ -41,12 +46,12 @@ def modified_gram_schmidt(gradients: np.ndarray, losses: np.ndarray, gamma: floa
 
     return ortho_grads
 
-# Convex hull minimum norm
+
+# Convex hull minimum norm from https://arxiv.org/abs/2401.04993, step 2
 def compute_convex_combination(ortho_grads: np.ndarray):
     norm_squared = np.linalg.norm(ortho_grads, axis=1) ** 2
-    inv_norms = 1.0 / norm_squared
-    sum_inv_norms = np.sum(inv_norms)
-    lambdas = inv_norms / sum_inv_norms
+    alpha = 2 / np.sum(1.0 / norm_squared)  # Eq. 13
+    lambdas = alpha / (2 * norm_squared)  # Eq. 12 & 14
     v_t = np.sum(lambdas[:, np.newaxis] * ortho_grads, axis=0)
     return v_t
 
