@@ -1,5 +1,3 @@
-# dml-algorithms
-
 # Federated Learning with PyTorch and Flower
 
 TODO: description
@@ -10,21 +8,24 @@ This introductory example to Flower uses PyTorch, but deep knowledge of PyTorch 
 
 ### Clone the project
 
-This will create a new directory called `dml-algorithms` with the following structure:
+This will create a new directory called `hybrid-fl-algorithms` with the following structure:
 
 ```shell
-dml-algorithms
+hybrid-fl-algorithms
 ├── src
 │   ├── __init__.py
-│   ├── client.py   # Defines your ClientApp
-│   ├── server.py   # Defines your ServerApp
+│   ├── client.py   # Defines the ClientApp
+│   ├── server.py   # Defines the ServerApp
 │   ├── models
 │   │   ├── lstm.py
 │   │   └── cnn.py
-│   ├── strategy
+│   ├── strategy    # Contains all aggregation strategies for servers
+│   │   ├── fedavg.py
+│   │   ├── fedprox.py
 │   │   └── adafed.py
 │   └── utils
-│       └── task.py         # Defines functions for training and data loading
+│   │   ├── dataset.py      # Defines functions for data loading
+│       └── task.py         # Defines functions for training
 ├── pyproject.toml      # Project metadata like dependencies and configs
 └── README.md
 ```
