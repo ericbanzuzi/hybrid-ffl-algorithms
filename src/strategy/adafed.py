@@ -1,7 +1,7 @@
-
 from logging import WARNING
-import numpy as np
 from typing import List, Optional, Union
+
+import numpy as np
 from flwr.common import (
     EvaluateIns,
     EvaluateRes,
@@ -14,31 +14,33 @@ from flwr.common import (
     ndarrays_to_parameters,
     parameters_to_ndarrays,
 )
-from flwr.server.strategy import FedProx
 from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
+from flwr.server.strategy import FedProx
 
 
 class AdaFedStrategy(FedProx):
     """Custom AdaFed strategy computing pseudo-gradients.
 
-    Implementation based on "AdaFed: Fair Federated Learning via Adaptive Common Descent Direction" 
+    Implementation based on "AdaFed: Fair Federated Learning via Adaptive Common Descent Direction"
     from https://arxiv.org/abs/2401.04993.
     """
 
-    def __init__(self, 
-                 gamma: float = 1.0, 
-                 eta: float = 1, 
-                 use_yogi: bool = False,
-                 use_adam: bool = False, 
-                 beta1: float = 0.9, 
-                 beta2: float = 0.99,
-                 m_t: Optional[np.ndarray] = None,
-                 v_t: Optional[np.ndarray] = None,
-                 tau: float = 1e-10,  # Small constant for stability
-                 *args, 
-                 **kwargs):
+    def __init__(
+        self,
+        gamma: float = 1.0,
+        eta: float = 1,
+        use_yogi: bool = False,
+        use_adam: bool = False,
+        beta1: float = 0.9,
+        beta2: float = 0.99,
+        m_t: Optional[np.ndarray] = None,
+        v_t: Optional[np.ndarray] = None,
+        tau: float = 1e-10,  # Small constant for stability
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.gamma = gamma
         self.global_weights: Optional[List[np.ndarray]] = None
@@ -55,13 +57,13 @@ class AdaFedStrategy(FedProx):
         """Compute a string representation of the strategy."""
         rep = f"AdaFed(accept_failures={self.accept_failures})"
         return rep
-    
+
     def initialize_parameters(
         self, client_manager: ClientManager
     ) -> Optional[Parameters]:
         """Initialize global model parameters."""
         return self.initial_parameters
-    
+
     def aggregate_fit(
         self,
         server_round: int,
@@ -74,7 +76,7 @@ class AdaFedStrategy(FedProx):
         # Do not aggregate if there are failures and failures are not accepted
         if not self.accept_failures and failures:
             return None, {}
-        
+
         # Convert results
         # Assume self.initial_parameters is already a list of np.ndarrays
         assert (
@@ -85,12 +87,15 @@ class AdaFedStrategy(FedProx):
         gradients_list, losses = [], []
         for _, fit_res in results:
             # Compute pseudo-gradient as single d-dimensional vectors
-            pseudo_gradient: NDArrays = np.concatenate([
-                x - y
-                for x, y in zip(
-                    initial_parameters, parameters_to_ndarrays(fit_res.parameters)
-                )
-            ], axis=None)
+            pseudo_gradient: NDArrays = np.concatenate(
+                [
+                    x - y
+                    for x, y in zip(
+                        initial_parameters, parameters_to_ndarrays(fit_res.parameters)
+                    )
+                ],
+                axis=None,
+            )
 
             gradients_list.append(pseudo_gradient)
             losses.append(fit_res.metrics["train_loss"])
@@ -103,11 +108,20 @@ class AdaFedStrategy(FedProx):
         # Minimum norm element
         d_t = self.compute_convex_combination(orthograds)
 
+        # fedavg
+        # client_examples = [res.num_examples for _, res in results]
+
+        # d_t = np.sum([
+        #     (num_examples / sum(client_examples)) * grad
+        #     for num_examples, grad in zip(client_examples, gradients_list)
+        # ], axis=0)
+
+        # Debugging info
         # for i in range(min(3, len(orthograds))):
         #     for j in range(i+1, min(3, len(orthograds))):
         #         cosine = np.dot(orthograds[i], orthograds[j]) / (np.linalg.norm(orthograds[i]) * np.linalg.norm(orthograds[j]))
         #         print(f"Cosine between orthograd {i} and {j}: {cosine}")
-        
+
         # print(f"Gradient shape: {gradients_matrix.shape}")
         # print(f"d_t norm: {np.linalg.norm(d_t)}")
         # print(f"Initial param norm: {np.linalg.norm(np.concatenate([p.flatten() for p in initial_parameters]))}")
@@ -120,18 +134,23 @@ class AdaFedStrategy(FedProx):
             if self.v_t is None:
                 self.v_t = np.zeros_like(d_t)
                 self.t = 0
-            
+                print("Initialized Yogi moments")
+
             # FedYogi update rule based on "Adaptive Federated Optimization" from https://arxiv.org/pdf/2003.00295v5
             self.t += 1
             self.m_t = self.beta1 * self.m_t + (1 - self.beta1) * d_t
-            self.v_t = self.v_t - (1 - self.beta2) * (d_t ** 2) * np.sign(self.v_t - d_t ** 2)
-            self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
-            self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
-            # self.m_that = self.m_t
-            # self.v_that = self.v_t
+            self.v_t = self.v_t - (1 - self.beta2) * (d_t**2) * np.sign(
+                self.v_t - d_t**2
+            )
+            # self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
+            # self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
+            self.m_that = self.m_t
+            self.v_that = self.v_t
             adjusted_dt = self.m_that / (np.sqrt(self.v_that) + self.tau)
-            
-            adafed_result = self.update_model_with_direction(adjusted_dt, initial_parameters)
+
+            adafed_result = self.update_model_with_direction(
+                adjusted_dt, initial_parameters
+            )
         elif self.use_adam:
             # Adam (adaptive learning rate)
             # Initialize moment estimates if not already done
@@ -140,18 +159,21 @@ class AdaFedStrategy(FedProx):
             if self.v_t is None:
                 self.v_t = np.zeros_like(d_t)
                 self.t = 0
-            
+                print("Initialized Adam moments")
+
             # Adam update rule based on "Adaptive Federated Optimization" from https://arxiv.org/pdf/2003.00295v5
             self.t += 1
             self.m_t = self.beta1 * self.m_t + (1 - self.beta1) * d_t
-            self.v_t = self.beta2 * self.v_t + (1 - self.beta2) * (d_t ** 2)
-            self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
-            self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
+            self.v_t = self.beta2 * self.v_t + (1 - self.beta2) * (d_t**2)
+            # self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
+            # self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
             # self.m_that = self.m_t
             # self.v_that = self.v_t
             adjusted_dt = self.m_that / (np.sqrt(self.v_that) + self.tau)
-            
-            adafed_result = self.update_model_with_direction(adjusted_dt, initial_parameters)
+
+            adafed_result = self.update_model_with_direction(
+                adjusted_dt, initial_parameters
+            )
 
         else:
             # Standard SGD update
@@ -173,7 +195,9 @@ class AdaFedStrategy(FedProx):
 
     @staticmethod
     # Modified Gram-Schmidt from https://arxiv.org/abs/2401.04993, step 1
-    def modified_gram_schmidt(gradients: np.ndarray, losses: np.ndarray, gamma: float = 1.0):
+    def modified_gram_schmidt(
+        gradients: np.ndarray, losses: np.ndarray, gamma: float = 1.0
+    ):
         K, D = gradients.shape
         ortho_grads = np.zeros_like(gradients)
 
@@ -188,16 +212,18 @@ class AdaFedStrategy(FedProx):
             proj_sum = np.zeros_like(gk)
             for i in range(k):
                 gi_tilde = ortho_grads[i]
-                proj_sum += (np.dot(gk, gi_tilde) / np.dot(gi_tilde, gi_tilde)) * gi_tilde
+                proj_sum += (
+                    np.dot(gk, gi_tilde) / np.dot(gi_tilde, gi_tilde)
+                ) * gi_tilde
 
             numerator = gk - proj_sum
             denominator = fk_gamma - sum(
-                np.dot(gk, ortho_grads[i]) / np.dot(ortho_grads[i], ortho_grads[i]) for i in range(k)
+                np.dot(gk, ortho_grads[i]) / np.dot(ortho_grads[i], ortho_grads[i])
+                for i in range(k)
             )
             ortho_grads[k] = numerator / denominator
 
         return ortho_grads
-    
 
     @staticmethod
     # Convex hull minimum norm from https://arxiv.org/abs/2401.04993, step 2
@@ -207,20 +233,17 @@ class AdaFedStrategy(FedProx):
         lambdas = alpha / (2 * norm_squared)  # Eq. 12 & 14
         v_t = np.sum(lambdas[:, np.newaxis] * ortho_grads, axis=0)
         return v_t
-    
-    def update_model_with_direction(self, d_t: np.ndarray, base_weights: List[np.ndarray]):
+
+    def update_model_with_direction(
+        self, d_t: np.ndarray, base_weights: List[np.ndarray]
+    ):
         # d_t is flat, base_weights is list of arrays with original shapes
         new_weights = []
         offset = 0
         for w in base_weights:
             shape, size = w.shape, np.prod(w.shape)
-            delta = d_t[offset:offset+size].reshape(shape)
-            if self.use_yogi: 
-                new_w = w + self.lr * delta  # FedYogi uses a "+" update rule
-            elif self.use_adam:
-                new_w = w + self.lr * delta # Adam also uses a "+" update rule
-            else:
-                new_w = w - self.lr * delta
+            delta = d_t[offset : offset + size].reshape(shape)
+            new_w = w - self.lr * delta
             new_weights.append(new_w)
             offset += size
         return new_weights

@@ -4,12 +4,12 @@ from typing import List, Tuple
 
 from flwr.common import Context, Metrics, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
-from flwr.server.strategy import FedAvg, FedProx, FedAdam, FedYogi
+from flwr.server.strategy import FedAdam, FedAvg, FedProx, FedYogi
 
-from src.utils.task import get_weights
-from src.models.cnn import CNN
+from src.models.cnn import CNN, ResNet18
 from src.models.lstm import ShakespeareLSTM
 from src.strategy.adafed import AdaFedStrategy
+from src.utils.task import get_weights
 
 
 # Define metric aggregation function
@@ -32,9 +32,15 @@ def server_fn(context: Context):
     model_type = context.run_config.get("model", "CNN").lower()
     use_yogi = context.run_config.get("yogi-server", 0) == 1
     use_adam = context.run_config.get("adam-server", 0) == 1
-    
+
     # Initialize model parameters
-    model = CNN(dataset=dataset) if model_type == 'cnn' else ShakespeareLSTM()
+    if model_type == "resnet18":
+        model = ResNet18(dataset=dataset)
+    elif model_type == "cnn" or dataset in ["shakespeare"]:
+        model = ShakespeareLSTM()
+    else:
+        model = CNN(dataset=dataset)
+
     ndarrays = get_weights(model)
     parameters = ndarrays_to_parameters(ndarrays)
 
@@ -45,7 +51,7 @@ def server_fn(context: Context):
         "evaluate_metrics_aggregation_fn": weighted_average,
         "initial_parameters": parameters,
     }
-    
+
     # Define the strategy
     if agg_strategy == "fedprox":
         strategy = FedProx(
@@ -65,7 +71,7 @@ def server_fn(context: Context):
         strategy = FedYogi(**base_kwargs)
     else:
         strategy = FedYogi(**base_kwargs)
-    
+
     config = ServerConfig(num_rounds=num_rounds)
 
     return ServerAppComponents(strategy=strategy, config=config)

@@ -21,7 +21,7 @@ The layout of the folders under `./mnist` should be:
 
 ---- ----| mnist-original.mat
 
-----| train 
+----| train
 
 ---- ----| train_file_name.json
 
@@ -32,5 +32,3 @@ The layout of the folders under `./mnist` should be:
 | generate_niid.py
 | README.md
 ```
-
-

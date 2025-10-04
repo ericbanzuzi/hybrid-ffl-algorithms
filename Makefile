@@ -20,5 +20,5 @@ wandb-key:
 
 demo-experiment:
 	@echo "Starting the XX experiment..."
-	@flwr run --run-config 'agg-strategy="fedprox" cli-strategy="fedprox" proximal-mu=0.5'
+	@flwr run . --run-config 'agg-strategy="fedprox" cli-strategy="fedprox" proximal-mu=0.5'
 	@echo "Experiment completed!✅"

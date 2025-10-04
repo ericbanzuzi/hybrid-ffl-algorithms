@@ -30,7 +30,7 @@ Make sure to delete the rem_user_data, sampled_data, test, and train subfolders 
 - Each .json file is an object with 4 keys:
   1. 'users', a list of users
   2. 'hierarchies', a list of strings, with each string representing the group that the respective user belongs in; not present in i.i.d. data
-  3. 'num_samples', a list of the number of samples for each user, and 
+  3. 'num_samples', a list of the number of samples for each user, and
   4. 'user_data', an object with user names as keys; the values are represented as objects with keys 'x', 'y', and 'raw'. 'x' and 'y' refer to strings and their corresponding next character. 'raw' refers to the text data from which the model data was extracted; this key appears only in all_data.json, and only when the '--raw' tag is used.
 - Run ```./stats.sh``` to get statistics of data (data/all_data/all_data.json must have been generated already)
 - In order to run reference implementations in ```../models``` directory, the ```-t sample``` tag must be used when running ```./preprocess.sh```

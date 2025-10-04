@@ -14,28 +14,40 @@ def set_weights(net, parameters):
     net.load_state_dict(state_dict, strict=True)
 
 
-def train(net, trainloader, valloader, epochs, learning_rate, device, prox_mu, cli_strategy = 'fedavg', 
-          personal_net = None, local_epochs = 1):
+def train(
+    net,
+    trainloader,
+    valloader,
+    epochs,
+    learning_rate,
+    device,
+    prox_mu,
+    cli_strategy="fedavg",
+    personal_net=None,
+    local_epochs=1,
+):
     """Train the model on the training set."""
 
     net.to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
-    
+
     # Ditto: maintain personalized model copy and optimizer
-    if cli_strategy == 'ditto':
+    if cli_strategy == "ditto":
         global_params = [p.clone().detach() for p in net.parameters()]
         personal_net.to(device)
-        personal_optimizer = torch.optim.SGD(personal_net.parameters(), lr=learning_rate, momentum=0.9)
-    if cli_strategy == 'fedprox':
+        personal_optimizer = torch.optim.SGD(
+            personal_net.parameters(), lr=learning_rate, momentum=0.9
+        )
+    if cli_strategy == "fedprox":
         global_params = [p.clone().detach() for p in net.parameters()]
     else:
         pass
 
     net.train()
-    if cli_strategy == 'ditto':
-        personal_net.train() 
-    
+    if cli_strategy == "ditto":
+        personal_net.train()
+
     total_loss = 0
     total_personal_loss = 0
     for i in range(max(epochs, local_epochs)):
@@ -44,7 +56,7 @@ def train(net, trainloader, valloader, epochs, learning_rate, device, prox_mu, c
             images = batch["img"]
             labels = batch["label"]
 
-            if cli_strategy == 'ditto':
+            if cli_strategy == "ditto":
                 # Step 1: Train global model as usual (FedAvg)
                 if i < epochs:
                     optimizer.zero_grad()
@@ -52,33 +64,43 @@ def train(net, trainloader, valloader, epochs, learning_rate, device, prox_mu, c
                     loss.backward()
                     optimizer.step()
                     total_loss += loss.item()
-                
+
                 # Step 2: Train personalized model with proximal term to global model
                 if i < local_epochs:
                     personal_optimizer.zero_grad()
-                    
+
                     proximal_term = 0.0
-                    for p_param, g_param in zip(personal_net.parameters(), global_params):
+                    for p_param, g_param in zip(
+                        personal_net.parameters(), global_params
+                    ):
                         proximal_term += (p_param - g_param).norm(2) ** 2
-                    
-                    personal_loss = criterion(personal_net(images.to(device)), labels) + (prox_mu / 2) * proximal_term
+
+                    personal_loss = (
+                        criterion(personal_net(images.to(device)), labels)
+                        + (prox_mu / 2) * proximal_term
+                    )
                     personal_loss.backward()
                     personal_optimizer.step()
                     total_personal_loss += personal_loss.item()
-            
-            elif cli_strategy == 'fedprox':
+
+            elif cli_strategy == "fedprox":
                 # FedProx with proximal term to global model
                 optimizer.zero_grad()
-                
+
                 proximal_term = 0.0
-                for local_weights, global_weights in zip(net.parameters(), global_params):
+                for local_weights, global_weights in zip(
+                    net.parameters(), global_params
+                ):
                     proximal_term += (local_weights - global_weights).norm(2) ** 2
-                
-                loss = criterion(net(images.to(device)), labels) + (prox_mu / 2) * proximal_term
+
+                loss = (
+                    criterion(net(images.to(device)), labels)
+                    + (prox_mu / 2) * proximal_term
+                )
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
-            
+
             else:
                 # FedAvg (Default)
                 optimizer.zero_grad()

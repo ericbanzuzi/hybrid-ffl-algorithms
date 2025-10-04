@@ -31,7 +31,7 @@ dml-algorithms
 
 ### Create a virtual environment
 
-Using Python: 
+Using Python:
 ```bash
 python3.11 -m venv .venv
 ```

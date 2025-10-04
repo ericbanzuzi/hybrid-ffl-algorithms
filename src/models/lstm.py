@@ -13,7 +13,14 @@ class ShakespeareLSTM(nn.Module):
     :hidden_dim: Number of features in the hidden state
     :num_layers: Number of recurrent layers
     """
-    def __init__(self, vocab_size: int = 80, embed_dim: int = 8, hidden_dim: int = 256, num_layers: int = 2):
+
+    def __init__(
+        self,
+        vocab_size: int = 80,
+        embed_dim: int = 8,
+        hidden_dim: int = 256,
+        num_layers: int = 2,
+    ):
         super().__init__()
         self.vocab_size = vocab_size
         self.hidden_dim = hidden_dim
@@ -26,10 +33,10 @@ class ShakespeareLSTM(nn.Module):
             input_size=embed_dim,
             hidden_size=hidden_dim,
             num_layers=num_layers,
-            batch_first=True
+            batch_first=True,
         )
         self.fc = nn.Linear(hidden_dim, vocab_size)
-    
+
     def init_hidden(self, batch_size):
         # Initialize hidden state and cell state with zeros
         h_0 = torch.zeros(self.num_layers, batch_size, self.hidden_size)
@@ -38,20 +45,20 @@ class ShakespeareLSTM(nn.Module):
 
     def forward(self, x, hidden=None):
         embed = self.embedding(x)
-        out, hidden = self.lstm(embed, hidden) 
+        out, hidden = self.lstm(embed, hidden)
         final_hidden_state = out[:, -1, :]
         logits = self.fc(final_hidden_state)
         return logits, hidden  # logit shape: (batch_size, vocab_size)
 
-   
-if __name__ == '__main__':
-    # Instantiate the model and print its summary 
+
+if __name__ == "__main__":
+    # Instantiate the model and print its summary
     vocab_size = 80  # For Shakespeare dataset with 80 characters in vocabulary
     model = ShakespeareLSTM(vocab_size=vocab_size)
     summary(model, input_size=(1, 80), dtypes=[torch.long])
 
     print()
-    
+
     # TEST:
     # Create a random input tensor (batch_size, sequence_length)
     batch_size = 10  # Number of devices per round

@@ -121,7 +121,7 @@ if [ -n "${VERIFICATION_FILE}" ]; then
         DIFF=`diff --brief ${VERIFICATION_FILE} ${TMP_FILE}`
         if [ $? -ne 0 ]; then
             echo "${DIFF}"
-            diff ${TMP_FILE} ${VERIFICATION_FILE} 
+            diff ${TMP_FILE} ${VERIFICATION_FILE}
             echo "Differing checksums found - please verify"
         else
             echo "Matching JSON files and checksums found!"
@@ -173,7 +173,7 @@ if [ "$CONT_SCRIPT" = true ] && [ ! $SAMPLE = "na" ]; then
         cd ../utils
 
         # Defaults to -1 if not specified, causes script to randomly generate seed
-        SEED_ARGUMENT="${SAMPLING_SEED:--1}" 
+        SEED_ARGUMENT="${SAMPLING_SEED:--1}"
 
         if [ $SAMPLE = "iid" ]; then
             LEAF_DATA_META_DIR=${META_DIR} python3 sample.py $NAMETAG --iid $IUSERTAG $SFRACTAG --seed ${SEED_ARGUMENT}
