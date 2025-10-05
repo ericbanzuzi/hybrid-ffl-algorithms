@@ -30,14 +30,14 @@ def server_fn(context: Context):
     num_rounds = context.run_config["num-server-rounds"]
     dataset = context.run_config["dataset"]
     agg_strategy = context.run_config.get("agg-strategy", "fedavg")
-    model_type = context.run_config.get("model", "CNN").lower()
+    selected_model = context.run_config.get("model", "CNN").lower()
     use_yogi = context.run_config.get("yogi-server", 0) == 1
     use_adam = context.run_config.get("adam-server", 0) == 1
 
     # Initialize model parameters
-    if model_type == "resnet18":
+    if selected_model == "resnet18":
         model = ResNet18(dataset=dataset)
-    elif model_type == "rnn" or dataset in ["shakespeare"]:
+    elif selected_model == "rnn" or dataset in ["shakespeare"]:
         model = ShakespeareLSTM()
     else:
         model = CNN(dataset=dataset)

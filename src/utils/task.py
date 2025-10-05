@@ -2,13 +2,16 @@ from collections import OrderedDict
 
 import torch
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 
 
 def get_weights(net):
+    """Return the weights of the model as a list of NumPy arrays."""
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
 
 def set_weights(net, parameters):
+    """Set the weights of the model from a list of NumPy arrays."""
     params_dict = zip(net.state_dict().keys(), parameters)
     state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
     net.load_state_dict(state_dict, strict=True)
@@ -16,17 +19,17 @@ def set_weights(net, parameters):
 
 def train(
     net,
-    trainloader,
-    valloader,
-    epochs,
-    learning_rate,
+    trainloader: DataLoader,
+    valloader: DataLoader,
+    epochs: int,
+    learning_rate: float,
     device,
-    prox_mu=0.0,
-    cli_strategy="fedavg",
+    prox_mu: float = 0.0,
+    cli_strategy: str = "fedavg",
     personal_net=None,
-    local_epochs=1,
-    q_ffl=0.0,  # 0 = standard FedAvg
-    momentum=0.9,
+    local_epochs: int = 1,
+    q_ffl: float = 0.0,  # 0 = standard FedAvg
+    momentum: float = 0.9,
 ):
     """Train the model on the training set with optional Q-FFL, FedProx, or Ditto."""
 
@@ -124,7 +127,7 @@ def train(
     return results
 
 
-def test(net, testloader, device):
+def test(net, testloader: DataLoader, device):
     """Validate the model on the test set."""
     net.to(device)  # move model to GPU if available
     criterion = torch.nn.CrossEntropyLoss()
