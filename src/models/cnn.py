@@ -4,6 +4,18 @@ import torch.nn.functional as F
 from torchinfo import summary
 from torchvision import models
 
+NUM_CLASSES = {
+    "cifar10": 10,
+    "femnist": 62,
+    "mnist": 10,
+}
+
+IN_CHANNELS = {
+    "cifar10": 3,
+    "femnist": 1,
+    "mnist": 1,
+}
+
 
 class CNN(nn.Module):
     """
@@ -13,15 +25,20 @@ class CNN(nn.Module):
     :num_classes: Number of output classes
     """
 
-    def __init__(self, num_classes: int = 10, dataset: str = None):
+    def __init__(self, dataset: str = None):
         super().__init__()
-        in_channels = 3 if dataset and "mnist" not in dataset else 1
+        in_channels = IN_CHANNELS.get(dataset, 1)
+        num_classes = NUM_CLASSES.get(dataset, 62)
         # Conv layers
         self.conv1 = nn.Conv2d(in_channels, 16, kernel_size=5, stride=1, padding="same")
         self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=1, padding="same")
 
         # Fully connected layers
-        self.fc1 = nn.Linear(7 * 7 * 32, 128)
+        self.fc1 = (
+            nn.Linear(8 * 8 * 32, 128)
+            if dataset == "cifar10"
+            else nn.Linear(7 * 7 * 32, 128)
+        )
         self.fc2 = nn.Linear(128, num_classes)
 
         # Dropout
@@ -52,9 +69,11 @@ class CNNCifar(nn.Module):
     :num_classes: Number of output classes
     """
 
-    def __init__(self, num_classes: int = 10, dataset: str = None):
+    def __init__(self, dataset: str = None):
         super().__init__()
-        in_channels = 3 if dataset and "mnist" not in dataset else 1
+        in_channels = IN_CHANNELS.get(dataset, 3)
+        num_classes = NUM_CLASSES.get(dataset, 10)
+
         self.conv1 = nn.Conv2d(in_channels, 32, 5, padding="same")
         self.pool1 = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(32, 64, 5, padding="same")
@@ -83,9 +102,11 @@ class CNNMnist(nn.Module):
     :num_classes: Number of output classes
     """
 
-    def __init__(self, num_classes: int = 10, dataset: str = None):
+    def __init__(self, dataset: str = None):
         super().__init__()
-        in_channels = 3 if dataset and "mnist" not in dataset else 1
+        in_channels = IN_CHANNELS.get(dataset, 1)
+        num_classes = NUM_CLASSES.get(dataset, 62)
+
         self.conv1 = nn.Conv2d(in_channels, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
         self.conv2_drop = nn.Dropout2d()
@@ -104,10 +125,10 @@ class CNNMnist(nn.Module):
 
 if __name__ == "__main__":
     print("\nCNNCifar:")
-    summary(CNNCifar(num_classes=62, dataset="mnist"), input_size=(1, 1, 28, 28))
+    summary(CNNCifar(dataset="cifar10"), input_size=(1, 3, 32, 32))
 
     print("\nCNNMnist:")
-    summary(CNNMnist(num_classes=62, dataset="mnist"), input_size=(1, 1, 28, 28))
+    summary(CNNMnist(dataset="femnist"), input_size=(1, 1, 28, 28))
 
     print("\nCNN:")
-    summary(CNN(num_classes=62, dataset="mnist"), input_size=(1, 1, 28, 28))
+    summary(CNN(dataset="femnist"), input_size=(1, 1, 28, 28))

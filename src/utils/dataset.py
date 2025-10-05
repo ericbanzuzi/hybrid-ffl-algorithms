@@ -64,10 +64,16 @@ def load_data(
                 dataset="uoft-cs/cifar10",
                 partitioners={
                     "train": DirichletPartitioner(
-                        num_partitions=num_partitions, alpha=0.5, seed=seed
+                        partition_by="label",
+                        num_partitions=num_partitions,
+                        alpha=0.5,
+                        seed=seed,
                     ),
                     "test": DirichletPartitioner(
-                        num_partitions=num_partitions, alpha=0.5, seed=seed
+                        partition_by="label",
+                        num_partitions=num_partitions,
+                        alpha=0.5,
+                        seed=seed,
                     ),
                 },
             )
@@ -126,7 +132,6 @@ def load_data(
         partition = fds.load_partition(nid_to_cid[partition_id])
         # Divide data on each node: 80% train, 20% test
         partition_train_test = partition.train_test_split(test_size=0.2, seed=seed)
-        partition_train_test = partition_train_test.with_transform(apply_transforms)
 
         if hparam_tuning:
             partition_train = partition_train_test["train"].with_transform(
@@ -142,6 +147,7 @@ def load_data(
             )
             testloader = DataLoader(partition_train_val["test"], batch_size=batch_size)
         else:
+            partition_train_test = partition_train_test.with_transform(apply_transforms)
             trainloader = DataLoader(
                 partition_train_test["train"], batch_size=batch_size, shuffle=True
             )

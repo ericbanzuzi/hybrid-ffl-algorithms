@@ -21,10 +21,11 @@ class FlowerClient(NumPyClient):
         strategy: str = "fedavg",
         dataset: str = "cifar10",
         net_type: str = "CNN",
+        group_norm: bool = False,
     ):
         """Initialize the client with data loaders, hyperparameters, and model."""
         if net_type == "resnet18":
-            self.net = ResNet18(dataset=dataset)
+            self.net = ResNet18(dataset=dataset, BN_to_GN=group_norm)
         elif net_type == "rnn" or dataset in ["shakespeare"]:
             self.net = ShakespeareLSTM()
         else:
@@ -36,6 +37,7 @@ class FlowerClient(NumPyClient):
         self.lr = learning_rate
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.strategy = strategy
+        self.dataset = dataset
 
     def fit(self, parameters, config):
         """Train the model with data of this client."""
@@ -69,12 +71,18 @@ def client_fn(context: Context):
 
     # Read run_config to fetch hyperparameters relevant to this run
     batch_size = context.run_config["batch-size"]
-    trainloader, valloader = load_data(partition_id, num_partitions, batch_size)
+    dataset = context.run_config["dataset"]
+    seed = context.run_config.get("seed", 42)
+    hparam_tuning = context.run_config.get("hparam-tuning", 0) == 1
     local_epochs = context.run_config["local-epochs"]
     learning_rate = context.run_config["learning-rate"]
-    dataset = context.run_config["dataset"]
     cli_strategy = context.run_config.get("cli-strategy", "fedavg")
     selected_model = context.run_config.get("model", "CNN").lower()
+    group_norm = context.run_config.get("group-norm", 0) == 1
+
+    trainloader, valloader = load_data(
+        partition_id, num_partitions, batch_size, dataset, seed, hparam_tuning
+    )
 
     # Return Client instance
     return FlowerClient(
@@ -85,6 +93,7 @@ def client_fn(context: Context):
         cli_strategy,
         dataset,
         selected_model,
+        group_norm,
     ).to_client()
 
 

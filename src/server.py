@@ -1,8 +1,6 @@
-"""pytorchexample: A Flower / PyTorch app."""
-
 from typing import List, Tuple
 
-from flwr.common import Context, Metrics, ndarrays_to_parameters
+from flwr.common import Context, Metrics, logger, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from flwr.server.strategy import FedAdam, FedAvg, FedProx, FedYogi
 
@@ -33,10 +31,11 @@ def server_fn(context: Context):
     selected_model = context.run_config.get("model", "CNN").lower()
     use_yogi = context.run_config.get("yogi-server", 0) == 1
     use_adam = context.run_config.get("adam-server", 0) == 1
+    group_norm = context.run_config.get("group-norm", 0) == 1
 
     # Initialize model parameters
     if selected_model == "resnet18":
-        model = ResNet18(dataset=dataset)
+        model = ResNet18(dataset=dataset, BN_to_GN=group_norm)
     elif selected_model == "rnn" or dataset in ["shakespeare"]:
         model = ShakespeareLSTM()
     else:
@@ -48,7 +47,7 @@ def server_fn(context: Context):
     base_kwargs = {
         "fraction_fit": context.run_config["fraction-fit"],
         "fraction_evaluate": context.run_config["fraction-evaluate"],
-        "min_available_clients": 2,
+        "min_available_clients": context.run_config.get("min-clients", 2),
         "evaluate_metrics_aggregation_fn": weighted_average,
         "initial_parameters": parameters,
     }
@@ -61,9 +60,9 @@ def server_fn(context: Context):
         )
     elif agg_strategy == "adafed":
         strategy = AdaFedStrategy(
+            **base_kwargs,
             use_yogi=use_yogi,
             use_adam=use_adam,
-            **base_kwargs,
             proximal_mu=context.run_config["proximal-mu"],
         )
     elif agg_strategy == "fedadam":
@@ -71,7 +70,7 @@ def server_fn(context: Context):
     elif agg_strategy == "fedyogi":
         strategy = FedYogi(**base_kwargs)
     else:
-        strategy = FedYogi(**base_kwargs)
+        strategy = FedAvg(**base_kwargs)
 
     config = ServerConfig(num_rounds=num_rounds)
 
