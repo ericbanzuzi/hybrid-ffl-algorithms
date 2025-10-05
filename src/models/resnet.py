@@ -16,7 +16,7 @@ from torchvision import models
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride=1):
+    def __init__(self, in_planes: int, planes: int, stride: int = 1):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(
             in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
@@ -51,7 +51,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_planes, planes, stride=1):
+    def __init__(self, in_planes: int, planes: int, stride: int = 1):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -89,8 +89,8 @@ class Bottleneck(nn.Module):
 class ResNet18(nn.Module):
     def __init__(
         self,
-        num_classes=10,
-        num_blocks=[2, 2, 2, 2],
+        num_classes: int = 10,
+        num_blocks: list[int] = [2, 2, 2, 2],
         dataset: str = "cifar10",
         BN_to_GN: bool = True,
     ):
@@ -133,7 +133,7 @@ class TorchResNet18(nn.Module):
     def __init__(
         self,
         num_classes: int = 10,
-        dataset: str = None,
+        dataset: str = "cifar10",
         weights=None,
         BN_to_GN: bool = True,
     ):
