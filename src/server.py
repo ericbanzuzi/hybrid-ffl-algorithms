@@ -6,8 +6,9 @@ from flwr.common import Context, Metrics, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from flwr.server.strategy import FedAdam, FedAvg, FedProx, FedYogi
 
-from src.models.cnn import CNN, ResNet18
+from src.models.cnn import CNN
 from src.models.lstm import ShakespeareLSTM
+from src.models.resnet import ResNet18
 from src.strategy.adafed import AdaFedStrategy
 from src.utils.task import get_weights
 
@@ -36,7 +37,7 @@ def server_fn(context: Context):
     # Initialize model parameters
     if model_type == "resnet18":
         model = ResNet18(dataset=dataset)
-    elif model_type == "cnn" or dataset in ["shakespeare"]:
+    elif model_type == "rnn" or dataset in ["shakespeare"]:
         model = ShakespeareLSTM()
     else:
         model = CNN(dataset=dataset)
