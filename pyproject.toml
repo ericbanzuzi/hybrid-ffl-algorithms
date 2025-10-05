@@ -44,7 +44,7 @@ adam-server = 0
 default = "local-simulation"
 
 [tool.flwr.federations.local-simulation]
-options.num-supernodes = 100  # number of clients
+options.num-supernodes = 500  # number of clients
 
 [tool.flwr.federations.local-simulation-gpu]
 options.num-supernodes = 10  # number of clients

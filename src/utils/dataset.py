@@ -8,6 +8,7 @@ from torchvision.transforms import Compose, Normalize, ToTensor
 
 fds = None  # global cache
 nid_to_cid = None  # mapping from partition index to character_id/writer_id for Shakespeare/FEMNIST
+malicious_clients = None  # list of malicious client partition IDs
 
 
 def prepare_shakespeare_fds(num_partitions: int = 31, seed: int = 42):
@@ -51,6 +52,7 @@ def load_data(
     dataset: str,
     seed: int = 42,
     hparam_tuning: bool = False,
+    num_malicious_clients: int = 0,
 ):
     """Load partition (train/test) for CIFAR10, FEMNIST, or Shakespeare."""
 
@@ -120,13 +122,29 @@ def load_data(
         if fds is None:
             fds, nid_to_cid = prepare_femnist_fds(num_partitions, seed)
 
+        if malicious_clients is None and num_malicious_clients > 0:
+            # Randomly select malicious clients
+            malicious_clients = random.sample(
+                range(num_partitions), num_malicious_clients
+            )
+
         transforms = Compose([ToTensor(), Normalize((0.5,), (0.5,))])
 
-        def apply_transforms(batch):
+        def apply_transforms(batch, is_malicious_client: bool = False):
             batch = {
                 "img": [transforms(img) for img in batch["image"]],
                 "label": [y for y in batch["character"]],
             }
+
+            # Flip labels randomly (label poisoning)
+            if is_malicious_client:
+                num_classes = 62
+                random.seed(
+                    seed + partition_id
+                )  # ensures same labels flipped each time
+                batch["label"] = [
+                    random.randint(0, num_classes - 1) for _ in batch["label"]
+                ]
             return batch
 
         partition = fds.load_partition(nid_to_cid[partition_id])
@@ -147,11 +165,28 @@ def load_data(
             )
             testloader = DataLoader(partition_train_val["test"], batch_size=batch_size)
         else:
-            partition_train_test = partition_train_test.with_transform(apply_transforms)
-            trainloader = DataLoader(
-                partition_train_test["train"], batch_size=batch_size, shuffle=True
-            )
-            testloader = DataLoader(partition_train_test["test"], batch_size=batch_size)
+            if malicious_clients:
+                is_malicious_client = partition_id in malicious_clients
+                partition_train = partition_train_test["train"].with_transform(
+                    apply_transforms(is_malicious_client=is_malicious_client)
+                )
+                partition_test = partition_train_test["test"].with_transform(
+                    apply_transforms
+                )
+                trainloader = DataLoader(
+                    partition_train, batch_size=batch_size, shuffle=True
+                )
+                testloader = DataLoader(partition_test, batch_size=batch_size)
+            else:
+                partition_train_test = partition_train_test.with_transform(
+                    apply_transforms
+                )
+                trainloader = DataLoader(
+                    partition_train_test["train"], batch_size=batch_size, shuffle=True
+                )
+                testloader = DataLoader(
+                    partition_train_test["test"], batch_size=batch_size
+                )
         return trainloader, testloader
 
     # --- Shakespeare ---

@@ -54,6 +54,7 @@ def train(
         personal_net.train()
 
     total_loss = 0
+    total_correct = 0
     total_personal_loss = 0
 
     for i in range(max(epochs, local_epochs)):
@@ -65,7 +66,8 @@ def train(
                 # --- Step 1: Train global model as usual (FedAvg) ---
                 if i < epochs:
                     optimizer.zero_grad()
-                    loss = criterion(net(images), labels)
+                    outputs = net(images)
+                    loss = criterion(outputs, labels)
                     # Q-FFL adjustment
                     if q_ffl > 0:
                         loss = (loss ** (q_ffl + 1)) / q_ffl
@@ -93,7 +95,8 @@ def train(
 
             elif cli_strategy == "fedprox":
                 optimizer.zero_grad()
-                loss = criterion(net(images), labels)
+                outputs = net(images)
+                loss = criterion(outputs, labels)
                 # Q-FFL adjustment
                 if q_ffl > 0:
                     loss = (loss ** (q_ffl + 1)) / q_ffl
@@ -104,23 +107,28 @@ def train(
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
+                total_correct += (outputs.argmax(1) == labels).sum().item()
 
             else:
                 # --- FedAvg (default) ---
                 optimizer.zero_grad()
-                loss = criterion(net(images), labels)
+                outputs = net(images)
+                loss = criterion(outputs, labels)
                 # Q-FFL adjustment
                 if q_ffl > 0:
                     loss = (loss ** (q_ffl + 1)) / q_ffl
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
+                total_correct += (outputs.argmax(1) == labels).sum().item()
 
     train_loss = total_loss / len(trainloader)
+    train_acc = total_correct / len(trainloader.dataset)
     val_loss, val_acc = test(net, valloader, device)
 
     results = {
         "train_loss": train_loss,
+        "train_accuracy": train_acc,
         "val_loss": val_loss,
         "val_accuracy": val_acc,
     }
@@ -138,7 +146,7 @@ def test(net, testloader: DataLoader, device):
             labels = batch["label"].to(device)
             outputs = net(images)
             loss += criterion(outputs, labels).item()
-            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+            correct += (outputs.argmax(1) == labels).sum().item()
     accuracy = correct / len(testloader.dataset)
     loss = loss / len(testloader)
     return loss, accuracy

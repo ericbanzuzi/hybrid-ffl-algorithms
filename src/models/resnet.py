@@ -1,7 +1,6 @@
 # File taken and adapted from: https://github.com/kuangliu/pytorch-cifar/blob/master/models/resnet.py
-"""ResNet in PyTorch.
-
-For Pre-activation ResNet, see 'preact_resnet.py'.
+"""
+ResNet in PyTorch that is meant to be used with CIFAR-10.
 
 Reference:
 [1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
@@ -90,7 +89,6 @@ class ResNet18(nn.Module):
     def __init__(
         self,
         num_classes: int = 10,
-        num_blocks: list[int] = [2, 2, 2, 2],
         dataset: str = "cifar10",
         BN_to_GN: bool = True,
     ):
@@ -103,10 +101,10 @@ class ResNet18(nn.Module):
             self.bn1 = nn.GroupNorm(num_groups=32, num_channels=64)
         else:
             self.bn1 = nn.BatchNorm2d(64)
-        self.layer1 = self._make_layer(BasicBlock, 64, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(BasicBlock, 128, num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(BasicBlock, 256, num_blocks[2], stride=2)
-        self.layer4 = self._make_layer(BasicBlock, 512, num_blocks[3], stride=2)
+        self.layer1 = self._make_layer(BasicBlock, 64, 2, stride=1)
+        self.layer2 = self._make_layer(BasicBlock, 128, 2, stride=2)
+        self.layer3 = self._make_layer(BasicBlock, 256, 2, stride=2)
+        self.layer4 = self._make_layer(BasicBlock, 512, 2, stride=2)
         self.linear = nn.Linear(512 * BasicBlock.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -139,10 +137,9 @@ class TorchResNet18(nn.Module):
     ):
         super().__init__()
         self.net = models.resnet18(weights=weights)
-        in_channels = 1 if dataset and "mnist" in dataset else 3
         # original conv: 7x7 stride 2 -> often changed to 3x3 stride 1 for CIFAR
         self.net.conv1 = nn.Conv2d(
-            in_channels, 64, kernel_size=3, stride=1, padding=1, bias=False
+            3, 64, kernel_size=3, stride=1, padding=1, bias=False
         )
         self.net.maxpool = nn.Identity()  # remove 3x3 stride 2 pooling
 
