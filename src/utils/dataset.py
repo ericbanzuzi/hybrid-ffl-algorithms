@@ -97,7 +97,9 @@ def load_data(
                 apply_transforms
             )
             # Divide data on each node: 80% train, 20% validation
-            partition_train_test = partition.train_test_split(test_size=0.2, seed=seed)
+            partition_train_test = train_partition.train_test_split(
+                test_size=0.2, seed=seed
+            )
 
             trainloader = DataLoader(
                 partition_train_test["train"], batch_size=batch_size, shuffle=True
@@ -166,7 +168,7 @@ def load_data(
             )
             testloader = DataLoader(partition_train_val["test"], batch_size=batch_size)
         else:
-            if not malicious_clients is None:
+            if malicious_clients is not None:
                 is_malicious_client = partition_id in malicious_clients
                 partition_train = partition_train_test["train"].with_transform(
                     apply_transforms(is_malicious_client=is_malicious_client)

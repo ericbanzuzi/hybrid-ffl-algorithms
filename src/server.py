@@ -1,9 +1,9 @@
 from typing import List, Tuple
 
 import numpy as np
-from flwr.common import Context, Metrics, logger, ndarrays_to_parameters
+from flwr.common import Context, Metrics, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
-from flwr.server.strategy import FedAdam, FedProx, FedYogi
+from flwr.server.strategy import FedAdam, FedYogi
 
 from src.models.cnn import CNN
 from src.models.lstm import ShakespeareLSTM
