@@ -58,6 +58,7 @@ def load_data(
 
     global fds
     global nid_to_cid
+    global malicious_clients
 
     # --- CIFAR10 ---
     if dataset.lower() == "cifar10":
@@ -122,7 +123,7 @@ def load_data(
         if fds is None:
             fds, nid_to_cid = prepare_femnist_fds(num_partitions, seed)
 
-        if malicious_clients is None and num_malicious_clients > 0:
+        if num_malicious_clients > 0 and malicious_clients is None:
             # Randomly select malicious clients
             malicious_clients = random.sample(
                 range(num_partitions), num_malicious_clients
@@ -165,7 +166,7 @@ def load_data(
             )
             testloader = DataLoader(partition_train_val["test"], batch_size=batch_size)
         else:
-            if malicious_clients:
+            if not malicious_clients is None:
                 is_malicious_client = partition_id in malicious_clients
                 partition_train = partition_train_test["train"].with_transform(
                     apply_transforms(is_malicious_client=is_malicious_client)

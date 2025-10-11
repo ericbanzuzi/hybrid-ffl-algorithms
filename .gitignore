@@ -172,3 +172,8 @@ cython_debug/
 
 src/dummy.py
 tutorials
+
+# Experiments and logs
+wandb
+experiment-results
+checkpoints

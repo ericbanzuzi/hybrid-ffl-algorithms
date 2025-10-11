@@ -18,14 +18,14 @@ from flwr.common import (
     parameters_to_ndarrays,
 )
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import FedAvg
+from flwr.server.strategy import FedProx
 from flwr.server.strategy.aggregate import aggregate, aggregate_inplace
 
 import wandb
 
 
-class CustomFedAvg(FedAvg):
-    """A strategy that keeps the core functionality of FedAvg unchanged but enables
+class CustomFedProx(FedProx):
+    """A strategy that keeps the core functionality of FedProx unchanged but enables
     additional features such as: Saving global checkpoints, saving metrics to the local
     file system as a JSON, pushing metrics to Weight & Biases.
     """
@@ -45,8 +45,8 @@ class CustomFedAvg(FedAvg):
 
         # Log those same metrics to W&B
         time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        project = f"fedavg-{dataset}-{model_type}"
-        wandb.init(project=project, name=f"fedavg-seed-{seed}")
+        project = f"fedprox-{dataset}-{model_type}"
+        wandb.init(project=project, name=f"fedprox-seed-{seed}")
         self.model_type = model_type
         self.dataset = dataset
         self.best_acc_so_far = 0.0  # Track best accuracy to save model checkpoints
@@ -73,7 +73,7 @@ class CustomFedAvg(FedAvg):
             self.best_acc_so_far = accuracy
             logger.log(INFO, "💡 New best global model found: %f", accuracy)
             # Save the PyTorch model
-            file_name = f"fedavg-round-{current_round}-seed-{self.seed}.pt"
+            file_name = f"fedprox-round-{current_round}-seed-{self.seed}.pt"
             torch.save(
                 arrays.to_torch_state_dict(), f"{self.checkpoint_dir}/{file_name}"
             )
@@ -120,7 +120,7 @@ class CustomFedAvg(FedAvg):
 
         # Save metrics as json
         with open(
-            f"{self.results_dir}/fedavg-results-seed-{self.seed}.json", "w"
+            f"{self.results_dir}/fedprox-results-seed-{self.seed}.json", "w"
         ) as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 
@@ -188,7 +188,7 @@ class CustomFedAvg(FedAvg):
 
         # Save metrics as json
         with open(
-            f"{self.results_dir}/fedavg-results-seed-{self.seed}.json", "w"
+            f"{self.results_dir}/fedprox-results-seed-{self.seed}.json", "w"
         ) as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 

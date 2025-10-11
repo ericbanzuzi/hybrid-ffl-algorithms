@@ -21,7 +21,7 @@ class FlowerClient(NumPyClient):
         strategy: str = "fedavg",
         dataset: str = "cifar10",
         net_type: str = "CNN",
-        group_norm: bool = False,
+        group_norm: bool = True,
     ):
         """Initialize the client with data loaders, hyperparameters, and model."""
         if net_type == "resnet18":
@@ -66,16 +66,18 @@ def client_fn(context: Context):
     """Construct a Client that will be run in a ClientApp."""
 
     # Read the node_config to fetch data partition associated to this node
-    partition_id = context.node_config["partition-id"]
-    num_partitions = context.node_config["num-partitions"]
+    partition_id = context.node_config[
+        "partition-id"
+    ]  # 0, 1, 2, ..., K -1, client id assigned to this node
+    num_partitions = context.node_config["num-partitions"]  # K, total number of clients
 
     # Read run_config to fetch hyperparameters relevant to this run
-    batch_size = context.run_config["batch-size"]
-    dataset = context.run_config["dataset"]
+    batch_size = context.run_config.get("batch-size", 32)
+    dataset = context.run_config.get("dataset", "femnist").lower()
     seed = context.run_config.get("seed", 42)
     hparam_tuning = context.run_config.get("hparam-tuning", 0) == 1
-    local_epochs = context.run_config["local-epochs"]
-    learning_rate = context.run_config["learning-rate"]
+    local_epochs = context.run_config.get("local-epochs", 1)
+    learning_rate = context.run_config.get("learning-rate", 0.1)
     cli_strategy = context.run_config.get("cli-strategy", "fedavg")
     selected_model = context.run_config.get("model", "CNN").lower()
     group_norm = context.run_config.get("group-norm", 0) == 1

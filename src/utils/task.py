@@ -127,10 +127,10 @@ def train(
     val_loss, val_acc = test(net, valloader, device)
 
     results = {
-        "train_loss": train_loss,
-        "train_accuracy": train_acc,
-        "val_loss": val_loss,
-        "val_accuracy": val_acc,
+        "train-loss": train_loss,
+        "train-accuracy": train_acc,
+        "val-loss": val_loss,
+        "val-accuracy": val_acc,
     }
     return results
 
