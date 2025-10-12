@@ -29,7 +29,7 @@ def train(
     personal_net=None,
     local_epochs: int = 1,
     q_ffl: float = 0.0,  # 0 = standard FedAvg
-    momentum: float = 0.9,
+    momentum: float = 0.0,
 ):
     """Train the model on the training set with optional Q-FFL, FedProx, or Ditto."""
 
