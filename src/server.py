@@ -3,7 +3,6 @@ from typing import List, Tuple
 import numpy as np
 from flwr.common import Context, Metrics, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
-from flwr.server.strategy import FedAdam, FedYogi
 
 from src.models.cnn import CNN
 from src.models.lstm import ShakespeareLSTM
@@ -112,7 +111,9 @@ def server_fn(context: Context):
     group_norm = context.run_config.get("group-norm", 0) == 1
     seed = context.run_config.get("seed", 42)
     proximal_mu = context.run_config.get("proximal-mu", 0.0)
-    lr = context.run_config.get("learning-rate", 0.1)
+    lr = context.run_config.get("agg-learning-rate") or context.run_config.get(
+        "learning-rate", 0.1
+    )
     cli_strategy = context.run_config.get("cli-strategy", "fedavg").lower()
     gamma = context.run_config.get("gamma", 1.0)
     tau = context.run_config.get("lambda", 1.0)
@@ -160,10 +161,6 @@ def server_fn(context: Context):
             gamma=gamma,
             tau=tau,
         )
-    elif agg_strategy == "fedadam":
-        strategy = FedAdam(**base_kwargs)
-    elif agg_strategy == "fedyogi":
-        strategy = FedYogi(**base_kwargs)
     else:
         strategy = CustomFedAvg(
             **base_kwargs,

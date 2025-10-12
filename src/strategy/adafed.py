@@ -8,6 +8,7 @@ import torch
 from flwr.common import (
     ArrayRecord,
     EvaluateRes,
+    FitIns,
     FitRes,
     NDArrays,
     Parameters,
@@ -63,6 +64,7 @@ class AdaFedStrategy(FedAvg):
         self.t = 0  # Time step for adaptive optimizers
         self.cli_strategy = cli_strategy
         self.proximal_mu = proximal_mu
+        self.pre_weights: Optional[Parameters] = None
 
         # A dictionary that will store the metrics generated on each round
         self.results_to_save = {}
@@ -88,11 +90,29 @@ class AdaFedStrategy(FedAvg):
         rep = f"AdaFed(accept_failures={self.accept_failures})"
         return rep
 
-    def initialize_parameters(
-        self, client_manager: ClientManager
-    ) -> Optional[Parameters]:
-        """Initialize global model parameters."""
-        return self.initial_parameters
+    def configure_fit(
+        self, server_round: int, parameters: Parameters, client_manager: ClientManager
+    ) -> list[tuple[ClientProxy, FitIns]]:
+        """Configure the next round of training."""
+        weights = parameters_to_ndarrays(parameters)
+        self.pre_weights = weights
+        parameters = ndarrays_to_parameters(weights)
+        config = {}
+        if self.on_fit_config_fn is not None:
+            # Custom fit config function provided
+            config = self.on_fit_config_fn(server_round)
+        fit_ins = FitIns(parameters, config)
+
+        # Sample clients
+        sample_size, min_num_clients = self.num_fit_clients(
+            client_manager.num_available()
+        )
+        clients = client_manager.sample(
+            num_clients=sample_size, min_num_clients=min_num_clients
+        )
+
+        # Return client/config pairs
+        return [(client, fit_ins) for client in clients]
 
     def _update_best_acc(
         self, current_round: int, accuracy: float, arrays: ArrayRecord
@@ -123,62 +143,41 @@ class AdaFedStrategy(FedAvg):
         if not self.accept_failures and failures:
             return None, {}
 
-        # Convert results
-        # Assume self.initial_parameters is already a list of np.ndarrays
-        assert (
-            self.initial_parameters is not None
-        ), "When using server-side optimization, model needs to be initialized."
+        if self.pre_weights is None:
+            raise AttributeError("AdaFed pre_weights are None in aggregate_fit")
 
-        initial_parameters = parameters_to_ndarrays(self.initial_parameters)
-        gradients_list, losses = [], []
+        initial_parameters = self.pre_weights
+        grads, losses = [], []
         for _, fit_res in results:
             # Compute pseudo-gradient as single d-dimensional vectors
+            new_parameters = parameters_to_ndarrays(fit_res.parameters)
             pseudo_gradient: NDArrays = np.concatenate(
-                [
-                    x - y
-                    for x, y in zip(
-                        initial_parameters, parameters_to_ndarrays(fit_res.parameters)
-                    )
-                ],
+                [x - y for x, y in zip(initial_parameters, new_parameters)],
                 axis=None,
             )
 
-            gradients_list.append(pseudo_gradient)
+            grads.append(pseudo_gradient)
             losses.append(fit_res.metrics["train-loss"])
 
-        gradients_matrix = np.stack(gradients_list)
+            if fit_res.metrics["train-loss"] <= 0:
+                logger.log(
+                    WARNING,
+                    "Client reported non-positive train-loss, which may lead to instability in AdaFed.",
+                )
 
         # Orthogonalize gradients
-        orthograds = self.modified_gram_schmidt(gradients_matrix, losses, self.gamma)
+        orthograds = self.modified_gram_schmidt(np.stack(grads), losses, self.gamma)
 
         # Minimum norm element
         d_t = self.compute_convex_combination(orthograds)
         logger.log(INFO, f"🚥 Computed d_t with norm {np.linalg.norm(d_t)}")
 
-        # fedavg
-        # client_examples = [res.num_examples for _, res in results]
-
-        # d_t = np.sum([
-        #     (num_examples / sum(client_examples)) * grad
-        #     for num_examples, grad in zip(client_examples, gradients_list)
-        # ], axis=0)
-
-        # Debugging info
-        # for i in range(min(3, len(orthograds))):
-        #     for j in range(i+1, min(3, len(orthograds))):
-        #         cosine = np.dot(orthograds[i], orthograds[j]) / (np.linalg.norm(orthograds[i]) * np.linalg.norm(orthograds[j]))
-        #         print(f"Cosine between orthograd {i} and {j}: {cosine}")
-
-        # print(f"Gradient shape: {gradients_matrix.shape}")
-        # print(f"d_t norm: {np.linalg.norm(d_t)}")
-        # print(f"Initial param norm: {np.linalg.norm(np.concatenate([p.flatten() for p in initial_parameters]))}")
-
         if self.use_yogi or self.use_adam:
-            d_t = self.compute_adjusted_dt(d_t, initial_parameters)
+            d_t = self.compute_adjusted_dt(d_t)
 
         # Update current weights
         adafed_result = self.update_model_with_direction(d_t, initial_parameters)
-        self.initial_parameters = ndarrays_to_parameters(adafed_result)
+        self.pre_weights = adafed_result
         parameters_aggregated = ndarrays_to_parameters(adafed_result)
 
         # Aggregate custom metrics if aggregation fn was provided
@@ -208,6 +207,12 @@ class AdaFedStrategy(FedAvg):
             current_round=server_round,
             accuracy=metrics_aggregated.get("avg-val-accuracy", 0.0),
             arrays=ArrayRecord.from_numpy_ndarrays(adafed_result),
+        )
+
+        logger.log(INFO, f"✅ Completed aggregation for round {server_round}")
+        logger.log(
+            INFO,
+            f"Avg-train-accuracy: {metrics_aggregated.get('avg-val-accuracy', 0.0)} | Avg-train-loss: {metrics_aggregated.get('avg-train-loss', 0.0)}",
         )
 
         # Return the expected outputs for `fit`
@@ -271,6 +276,11 @@ class AdaFedStrategy(FedAvg):
 
         # Log metrics to W&B
         wandb.log(my_results, step=server_round)
+        logger.log(INFO, f"✅ Completed evaluation for round {server_round}")
+        logger.log(
+            INFO,
+            f"Avg-test-accuracy: {metrics_aggregated.get('avg-test-accuracy', 0.0)} | Avg-test-loss: {loss_aggregated}",
+        )
 
         # Return the expected outputs for `evaluate`
         return loss_aggregated, metrics_aggregated
@@ -285,8 +295,10 @@ class AdaFedStrategy(FedAvg):
         ortho_grads = np.zeros_like(gradients)
         eps = 1e-10  # Add small epsilon for numerical stability
 
+        # Eq. 5
         ortho_grads[0] = gradients[0] / (np.abs(losses[0]) ** gamma + eps)
 
+        # Eq. 6
         for k in range(1, K):
             gk = gradients[k]
             fk_gamma = np.abs(losses[k]) ** gamma
@@ -323,9 +335,10 @@ class AdaFedStrategy(FedAvg):
     @staticmethod
     # Convex hull minimum norm from https://arxiv.org/abs/2401.04993, step 2
     def compute_convex_combination(ortho_grads: np.ndarray):
+        """Compute minimum norm element in convex hull of orthogonalized gradients."""
         norm_squared = np.linalg.norm(ortho_grads, axis=1) ** 2
         alpha = 2 / np.sum(1.0 / norm_squared)  # Eq. 13
-        lambdas = alpha / (2 * norm_squared)  # Eq. 12 & 14
+        lambdas = alpha / (2 * norm_squared)  # Eq. 12
         v_t = np.sum(lambdas[:, np.newaxis] * ortho_grads, axis=0)
         return v_t
 
@@ -338,7 +351,7 @@ class AdaFedStrategy(FedAvg):
         for w in base_weights:
             shape, size = w.shape, np.prod(w.shape)
             delta = d_t[offset : offset + size].reshape(shape)
-            new_w = w - self.lr * delta
+            new_w = w + self.lr * delta
             new_weights.append(new_w)
             offset += size
         return new_weights
@@ -380,8 +393,8 @@ class AdaFedStrategy(FedAvg):
             self.v_t = self.beta2 * self.v_t + (1 - self.beta2) * (d_t**2)
             # self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
             # self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
-            # self.m_that = self.m_t
-            # self.v_that = self.v_t
+            self.m_that = self.m_t
+            self.v_that = self.v_t
             adjusted_dt = self.m_that / (np.sqrt(self.v_that) + self.tau)
         else:
             adjusted_dt = d_t
