@@ -26,25 +26,28 @@ serverapp = "src.server:app"
 clientapp = "src.client:app"
 
 [tool.flwr.app.config]
-num-server-rounds = 5
+num-server-rounds = 20
 fraction-fit = 1
-local-epochs = 1
+local-epochs = 2
 fraction-evaluate = 1
 learning-rate = 0.1
 batch-size = 32
 dataset = "femnist"
-agg-strategy = "fedprox"
-cli-strategy = "fedprox"
+agg-strategy = "adafed"
+cli-strategy = "fedavg"
 proximal-mu = 0.5
 model = "cnn"
 yogi-server = 0
 adam-server = 0
+seed = 1
+gamma = 1
+lambda = 1
 
 [tool.flwr.federations]
 default = "local-simulation"
 
 [tool.flwr.federations.local-simulation]
-options.num-supernodes = 100  # number of clients
+options.num-supernodes = 2  # number of clients
 
 [tool.flwr.federations.local-simulation-gpu]
 options.num-supernodes = 10  # number of clients

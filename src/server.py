@@ -112,6 +112,10 @@ def server_fn(context: Context):
     group_norm = context.run_config.get("group-norm", 0) == 1
     seed = context.run_config.get("seed", 42)
     proximal_mu = context.run_config.get("proximal-mu", 0.0)
+    lr = context.run_config.get("learning-rate", 0.1)
+    cli_strategy = context.run_config.get("cli-strategy", "fedavg").lower()
+    gamma = context.run_config.get("gamma", 1.0)
+    tau = context.run_config.get("lambda", 1.0)
 
     # Initialize model parameters
     if selected_model == "resnet18":
@@ -148,6 +152,13 @@ def server_fn(context: Context):
             use_yogi=use_yogi,
             use_adam=use_adam,
             proximal_mu=proximal_mu,
+            cli_strategy=cli_strategy,
+            model_type=selected_model,
+            dataset=dataset,
+            seed=seed,
+            lr=lr,
+            gamma=gamma,
+            tau=tau,
         )
     elif agg_strategy == "fedadam":
         strategy = FedAdam(**base_kwargs)

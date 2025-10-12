@@ -1,15 +1,16 @@
 from collections import OrderedDict
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
 
-def get_weights(net):
+def get_weights(net: torch.nn.Module) -> list[np.ndarray]:
     """Return the weights of the model as a list of NumPy arrays."""
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
 
-def set_weights(net, parameters):
+def set_weights(net: torch.nn.Module, parameters: list[np.ndarray]):
     """Set the weights of the model from a list of NumPy arrays."""
     params_dict = zip(net.state_dict().keys(), parameters)
     state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})

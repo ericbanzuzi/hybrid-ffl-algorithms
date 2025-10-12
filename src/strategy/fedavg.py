@@ -1,8 +1,6 @@
 import json
 import os
-from datetime import datetime
 from logging import INFO, WARNING
-from pathlib import Path
 from typing import Optional, Union
 
 import numpy as np
@@ -33,7 +31,7 @@ class CustomFedAvg(FedAvg):
     def __init__(
         self,
         model_type: str = "cnn",
-        dataset: str = "cifar10",
+        dataset: str = "femnist",
         seed: int = 42,
         *args,
         **kwargs,
@@ -44,7 +42,6 @@ class CustomFedAvg(FedAvg):
         self.results_to_save = {}
 
         # Log those same metrics to W&B
-        time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         project = f"fedavg-{dataset}-{model_type}"
         wandb.init(project=project, name=f"fedavg-seed-{seed}")
         self.model_type = model_type
@@ -59,11 +56,6 @@ class CustomFedAvg(FedAvg):
         self.checkpoint_dir = f"./checkpoints/{dataset}-{model_type}/"
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
-
-    def set_save_path_and_run_dir(self, path: Path, run_dir: str):
-        """Set the path where results and model checkpoints will be saved."""
-        self.save_path = path
-        self.run_dir = run_dir
 
     def _update_best_acc(
         self, current_round: int, accuracy: float, arrays: ArrayRecord

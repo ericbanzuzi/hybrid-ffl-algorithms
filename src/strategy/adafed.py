@@ -1,26 +1,29 @@
-from logging import WARNING
+import json
+import os
+from logging import INFO, WARNING
 from typing import List, Optional, Union
 
 import numpy as np
+import torch
 from flwr.common import (
-    EvaluateIns,
+    ArrayRecord,
     EvaluateRes,
-    FitIns,
     FitRes,
-    MetricsAggregationFn,
     NDArrays,
     Parameters,
     Scalar,
+    logger,
     ndarrays_to_parameters,
     parameters_to_ndarrays,
 )
-from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import FedProx
+from flwr.server.strategy import FedAvg
+
+import wandb
 
 
-class AdaFedStrategy(FedProx):
+class AdaFedStrategy(FedAvg):
     """Custom AdaFed strategy computing pseudo-gradients.
 
     Implementation based on "AdaFed: Fair Federated Learning via Adaptive Common Descent Direction"
@@ -29,8 +32,12 @@ class AdaFedStrategy(FedProx):
 
     def __init__(
         self,
+        model_type: str = "cnn",
+        dataset: str = "femnist",
+        seed: int = 42,
+        cli_strategy: str = "fedavg",
         gamma: float = 1.0,
-        eta: float = 1,
+        lr: float = 0.1,
         use_yogi: bool = False,
         use_adam: bool = False,
         beta1: float = 0.9,
@@ -38,13 +45,14 @@ class AdaFedStrategy(FedProx):
         m_t: Optional[np.ndarray] = None,
         v_t: Optional[np.ndarray] = None,
         tau: float = 1e-10,  # Small constant for stability
+        proximal_mu: float = 0.0,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.gamma = gamma
         self.global_weights: Optional[List[np.ndarray]] = None
-        self.lr = eta
+        self.lr = lr
         self.use_yogi = use_yogi
         self.use_adam = use_adam
         self.beta1 = beta1
@@ -52,6 +60,28 @@ class AdaFedStrategy(FedProx):
         self.m_t = m_t  # type: ignore
         self.v_t = v_t  # type: ignore
         self.tau = tau
+        self.t = 0  # Time step for adaptive optimizers
+        self.cli_strategy = cli_strategy
+        self.proximal_mu = proximal_mu
+
+        # A dictionary that will store the metrics generated on each round
+        self.results_to_save = {}
+
+        # Log those same metrics to W&B
+        project = f"adafed-{cli_strategy}-{dataset}-{model_type}"
+        wandb.init(project=project, name=f"adafed-{cli_strategy}-seed-{seed}")
+        self.model_type = model_type
+        self.dataset = dataset
+        self.best_acc_so_far = 0.0  # Track best accuracy to save model checkpoints
+        self.seed = seed
+
+        self.results_dir = f"./experiment-results/{dataset}-{model_type}/"
+        if not os.path.exists(self.results_dir):
+            os.makedirs(self.results_dir)
+
+        self.checkpoint_dir = f"./checkpoints/{dataset}-{model_type}/"
+        if not os.path.exists(self.checkpoint_dir):
+            os.makedirs(self.checkpoint_dir)
 
     def __repr__(self) -> str:
         """Compute a string representation of the strategy."""
@@ -63,6 +93,22 @@ class AdaFedStrategy(FedProx):
     ) -> Optional[Parameters]:
         """Initialize global model parameters."""
         return self.initial_parameters
+
+    def _update_best_acc(
+        self, current_round: int, accuracy: float, arrays: ArrayRecord
+    ) -> None:
+        """Update best accuracy and save model checkpoint if current accuracy is higher."""
+        if accuracy > self.best_acc_so_far:
+            self.best_acc_so_far = accuracy
+            logger.log(INFO, "💡 New best global model found: %f", accuracy)
+            # Save the PyTorch model
+            file_name = (
+                f"adafed-{self.cli_strategy}-round-{current_round}-seed-{self.seed}.pt"
+            )
+            torch.save(
+                arrays.to_torch_state_dict(), f"{self.checkpoint_dir}/{file_name}"
+            )
+            logger.log(INFO, "💾 New best model saved to disk: %s", file_name)
 
     def aggregate_fit(
         self,
@@ -98,7 +144,7 @@ class AdaFedStrategy(FedProx):
             )
 
             gradients_list.append(pseudo_gradient)
-            losses.append(fit_res.metrics["train_loss"])
+            losses.append(fit_res.metrics["train-loss"])
 
         gradients_matrix = np.stack(gradients_list)
 
@@ -107,6 +153,7 @@ class AdaFedStrategy(FedProx):
 
         # Minimum norm element
         d_t = self.compute_convex_combination(orthograds)
+        logger.log(INFO, f"🚥 Computed d_t with norm {np.linalg.norm(d_t)}")
 
         # fedavg
         # client_examples = [res.num_examples for _, res in results]
@@ -126,60 +173,11 @@ class AdaFedStrategy(FedProx):
         # print(f"d_t norm: {np.linalg.norm(d_t)}")
         # print(f"Initial param norm: {np.linalg.norm(np.concatenate([p.flatten() for p in initial_parameters]))}")
 
-        if self.use_yogi:
-            # FedYogi (adaptive learning rate)
-            # Initialize moment estimates if not already done
-            if self.m_t is None:
-                self.m_t = np.zeros_like(d_t)
-            if self.v_t is None:
-                self.v_t = np.zeros_like(d_t)
-                self.t = 0
-                print("Initialized Yogi moments")
-
-            # FedYogi update rule based on "Adaptive Federated Optimization" from https://arxiv.org/pdf/2003.00295v5
-            self.t += 1
-            self.m_t = self.beta1 * self.m_t + (1 - self.beta1) * d_t
-            self.v_t = self.v_t - (1 - self.beta2) * (d_t**2) * np.sign(
-                self.v_t - d_t**2
-            )
-            # self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
-            # self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
-            self.m_that = self.m_t
-            self.v_that = self.v_t
-            adjusted_dt = self.m_that / (np.sqrt(self.v_that) + self.tau)
-
-            adafed_result = self.update_model_with_direction(
-                adjusted_dt, initial_parameters
-            )
-        elif self.use_adam:
-            # Adam (adaptive learning rate)
-            # Initialize moment estimates if not already done
-            if self.m_t is None:
-                self.m_t = np.zeros_like(d_t)
-            if self.v_t is None:
-                self.v_t = np.zeros_like(d_t)
-                self.t = 0
-                print("Initialized Adam moments")
-
-            # Adam update rule based on "Adaptive Federated Optimization" from https://arxiv.org/pdf/2003.00295v5
-            self.t += 1
-            self.m_t = self.beta1 * self.m_t + (1 - self.beta1) * d_t
-            self.v_t = self.beta2 * self.v_t + (1 - self.beta2) * (d_t**2)
-            # self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
-            # self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
-            # self.m_that = self.m_t
-            # self.v_that = self.v_t
-            adjusted_dt = self.m_that / (np.sqrt(self.v_that) + self.tau)
-
-            adafed_result = self.update_model_with_direction(
-                adjusted_dt, initial_parameters
-            )
-
-        else:
-            # Standard SGD update
-            adafed_result = self.update_model_with_direction(d_t, initial_parameters)
+        if self.use_yogi or self.use_adam:
+            d_t = self.compute_adjusted_dt(d_t, initial_parameters)
 
         # Update current weights
+        adafed_result = self.update_model_with_direction(d_t, initial_parameters)
         self.initial_parameters = ndarrays_to_parameters(adafed_result)
         parameters_aggregated = ndarrays_to_parameters(adafed_result)
 
@@ -189,22 +187,106 @@ class AdaFedStrategy(FedProx):
             fit_metrics = [(res.num_examples, res.metrics) for _, res in results]
             metrics_aggregated = self.fit_metrics_aggregation_fn(fit_metrics)
         elif server_round == 1:  # Only log this warning once
-            log(WARNING, "No fit_metrics_aggregation_fn provided")
+            logger.log(WARNING, "No fit_metrics_aggregation_fn provided")
 
+        # Store metrics as dictionary
+        my_results = metrics_aggregated
+        self.results_to_save[server_round] = my_results
+
+        # Save metrics as json
+        with open(
+            f"{self.results_dir}/adafed-{self.cli_strategy}-results-seed-{self.seed}.json",
+            "w",
+        ) as json_file:
+            json.dump(self.results_to_save, json_file, indent=4)
+
+        # Log metrics to W&B
+        wandb.log(my_results, step=server_round)
+
+        # Save new Global Model as a PyTorch checkpoint
+        self._update_best_acc(
+            current_round=server_round,
+            accuracy=metrics_aggregated.get("avg-val-accuracy", 0.0),
+            arrays=ArrayRecord.from_numpy_ndarrays(adafed_result),
+        )
+
+        # Return the expected outputs for `fit`
         return parameters_aggregated, metrics_aggregated
+
+    def loss_avg(
+        self,
+        losses: list[float],
+    ) -> tuple[float, float]:
+        """Compute weighted average loss."""
+        if not losses:
+            return 0.0, 0.0
+        return np.mean(losses), np.std(losses, ddof=0)
+
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: list[tuple[ClientProxy, EvaluateRes]],
+        failures: list[Union[tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> tuple[Optional[float], dict[str, Scalar]]:
+        """Aggregate evaluation losses using weighted average."""
+        # Modified from FedAvg.aggregate_evaluate to save metrics and log to W&B
+        if not results:
+            return None, {}
+        # Do not aggregate if there are failures and failures are not accepted
+        if not self.accept_failures and failures:
+            return None, {}
+
+        # Aggregate loss
+        loss_aggregated, std_loss_aggregated = self.loss_avg(
+            [evaluate_res.loss for _, evaluate_res in results]
+        )
+
+        # Aggregate custom metrics if aggregation fn was provided
+        metrics_aggregated = {}
+        if self.evaluate_metrics_aggregation_fn:
+            eval_metrics = [(res.num_examples, res.metrics) for _, res in results]
+            metrics_aggregated = self.evaluate_metrics_aggregation_fn(eval_metrics)
+        elif server_round == 1:  # Only log this warning once
+            logger.log(WARNING, "No evaluate_metrics_aggregation_fn provided")
+
+        # Store metrics as dictionary
+        my_results = {
+            "avg-test-loss": loss_aggregated,
+            "std-test-loss": std_loss_aggregated,
+            **metrics_aggregated,
+        }
+
+        # Insert into local dictionary
+        self.results_to_save[server_round] = {
+            **self.results_to_save[server_round],
+            **my_results,
+        }
+
+        # Save metrics as json
+        with open(
+            f"{self.results_dir}/adafed-{self.cli_strategy}-results-seed-{self.seed}.json",
+            "w",
+        ) as json_file:
+            json.dump(self.results_to_save, json_file, indent=4)
+
+        # Log metrics to W&B
+        wandb.log(my_results, step=server_round)
+
+        # Return the expected outputs for `evaluate`
+        return loss_aggregated, metrics_aggregated
 
     @staticmethod
     # Modified Gram-Schmidt from https://arxiv.org/abs/2401.04993, step 1
     def modified_gram_schmidt(
         gradients: np.ndarray, losses: np.ndarray, gamma: float = 1.0
-    ):
+    ) -> np.ndarray:
+        """Modified Gram-Schmidt with numerical stability checks."""
         K, D = gradients.shape
         ortho_grads = np.zeros_like(gradients)
+        eps = 1e-10  # Add small epsilon for numerical stability
 
-        # Eq. 5
-        ortho_grads[0] = gradients[0] / (np.abs(losses[0]) ** gamma)
+        ortho_grads[0] = gradients[0] / (np.abs(losses[0]) ** gamma + eps)
 
-        # Eq. 6
         for k in range(1, K):
             gk = gradients[k]
             fk_gamma = np.abs(losses[k]) ** gamma
@@ -212,16 +294,29 @@ class AdaFedStrategy(FedProx):
             proj_sum = np.zeros_like(gk)
             for i in range(k):
                 gi_tilde = ortho_grads[i]
-                proj_sum += (
-                    np.dot(gk, gi_tilde) / np.dot(gi_tilde, gi_tilde)
-                ) * gi_tilde
+                denom = np.dot(gi_tilde, gi_tilde)
+                if denom > eps:
+                    proj_sum += (np.dot(gk, gi_tilde) / denom) * gi_tilde
 
             numerator = gk - proj_sum
-            denominator = fk_gamma - sum(
-                np.dot(gk, ortho_grads[i]) / np.dot(ortho_grads[i], ortho_grads[i])
+
+            # Compute denominator with numerical stability
+            denom_correction = sum(
+                np.dot(gk, ortho_grads[i])
+                / (np.dot(ortho_grads[i], ortho_grads[i]) + eps)
                 for i in range(k)
             )
-            ortho_grads[k] = numerator / denominator
+            denominator = fk_gamma - denom_correction
+
+            # Add clipping to prevent explosion
+            if np.abs(denominator) < eps:
+                # If denominator is near zero, skip normalization (keep unnormalized gradient)
+                ortho_grads[k] = numerator / (eps * 10)
+                logger.log(
+                    WARNING, f"Near-zero denominator at k={k}, using small value"
+                )
+            else:
+                ortho_grads[k] = numerator / denominator
 
         return ortho_grads
 
@@ -247,3 +342,48 @@ class AdaFedStrategy(FedProx):
             new_weights.append(new_w)
             offset += size
         return new_weights
+
+    def compute_adjusted_dt(self, d_t: np.ndarray) -> np.ndarray:
+        if self.use_yogi:
+            # FedYogi (adaptive learning rate)
+            # Initialize moment estimates if not already done
+            if self.m_t is None:
+                self.m_t = np.zeros_like(d_t)
+            if self.v_t is None:
+                self.v_t = np.zeros_like(d_t)
+                logger.log(INFO, "➡️ Initialized Yogi moments")
+
+            # FedYogi update rule based on "Adaptive Federated Optimization" from https://arxiv.org/pdf/2003.00295v5
+            self.t += 1
+            self.m_t = self.beta1 * self.m_t + (1 - self.beta1) * d_t
+            self.v_t = self.v_t - (1 - self.beta2) * (d_t**2) * np.sign(
+                self.v_t - d_t**2
+            )
+            # self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
+            # self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
+            self.m_that = self.m_t
+            self.v_that = self.v_t
+            adjusted_dt = self.m_that / (np.sqrt(self.v_that) + self.tau)
+
+        elif self.use_adam:
+            # Adam (adaptive learning rate)
+            # Initialize moment estimates if not already done
+            if self.m_t is None:
+                self.m_t = np.zeros_like(d_t)
+            if self.v_t is None:
+                self.v_t = np.zeros_like(d_t)
+                logger.log(INFO, "➡️ Initialized Adam moments")
+
+            # Adam update rule based on "Adaptive Federated Optimization" from https://arxiv.org/pdf/2003.00295v5
+            self.t += 1
+            self.m_t = self.beta1 * self.m_t + (1 - self.beta1) * d_t
+            self.v_t = self.beta2 * self.v_t + (1 - self.beta2) * (d_t**2)
+            # self.m_that = self.m_t / (1 - self.beta1 ** self.t)  # Bias correction
+            # self.v_that = self.v_t / (1 - self.beta2 ** self.t)  # Bias correction
+            # self.m_that = self.m_t
+            # self.v_that = self.v_t
+            adjusted_dt = self.m_that / (np.sqrt(self.v_that) + self.tau)
+        else:
+            adjusted_dt = d_t
+
+        return adjusted_dt
