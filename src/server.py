@@ -7,9 +7,10 @@ from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from src.models.cnn import CNN
 from src.models.lstm import ShakespeareLSTM
 from src.models.resnet import ResNet18
-from src.strategy.adafed import AdaFedStrategy
+from src.strategy.adafed import AdaFed
 from src.strategy.fedavg import CustomFedAvg
 from src.strategy.fedprox import CustomFedProx
+from src.strategy.fedyogi import CustomFedYogi
 from src.utils.task import get_weights
 
 
@@ -148,7 +149,7 @@ def server_fn(context: Context):
             proximal_mu=proximal_mu,
         )
     elif agg_strategy == "adafed":
-        strategy = AdaFedStrategy(
+        strategy = AdaFed(
             **base_kwargs,
             use_yogi=use_yogi,
             use_adam=use_adam,
@@ -160,6 +161,15 @@ def server_fn(context: Context):
             lr=lr,
             gamma=gamma,
             tau=tau,
+        )
+    elif agg_strategy in ["fedyogi", "yogi"]:
+        strategy = CustomFedYogi(
+            **base_kwargs,
+            proximal_mu=proximal_mu,
+            cli_strategy=cli_strategy,
+            model_type=selected_model,
+            dataset=dataset,
+            seed=seed,
         )
     else:
         strategy = CustomFedAvg(

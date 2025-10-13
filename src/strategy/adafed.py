@@ -24,7 +24,7 @@ from flwr.server.strategy import FedAvg
 import wandb
 
 
-class AdaFedStrategy(FedAvg):
+class AdaFed(FedAvg):
     """Custom AdaFed strategy computing pseudo-gradients.
 
     Implementation based on "AdaFed: Fair Federated Learning via Adaptive Common Descent Direction"
@@ -64,7 +64,7 @@ class AdaFedStrategy(FedAvg):
         self.t = 0  # Time step for adaptive optimizers
         self.cli_strategy = cli_strategy
         self.proximal_mu = proximal_mu
-        self.pre_weights: Optional[Parameters] = None
+        self.current_weights: Optional[Parameters] = None
 
         # A dictionary that will store the metrics generated on each round
         self.results_to_save = {}
@@ -95,7 +95,7 @@ class AdaFedStrategy(FedAvg):
     ) -> list[tuple[ClientProxy, FitIns]]:
         """Configure the next round of training."""
         weights = parameters_to_ndarrays(parameters)
-        self.pre_weights = weights
+        self.current_weights = weights
         parameters = ndarrays_to_parameters(weights)
         config = {}
         if self.on_fit_config_fn is not None:
@@ -143,10 +143,10 @@ class AdaFedStrategy(FedAvg):
         if not self.accept_failures and failures:
             return None, {}
 
-        if self.pre_weights is None:
+        if self.current_weights is None:
             raise AttributeError("AdaFed pre_weights are None in aggregate_fit")
 
-        initial_parameters = self.pre_weights
+        initial_parameters = self.current_weights
         grads, losses = [], []
         for _, fit_res in results:
             # Compute pseudo-gradient as single d-dimensional vectors
@@ -177,7 +177,7 @@ class AdaFedStrategy(FedAvg):
 
         # Update current weights
         adafed_result = self.update_model_with_direction(d_t, initial_parameters)
-        self.pre_weights = adafed_result
+        self.current_weights = adafed_result
         parameters_aggregated = ndarrays_to_parameters(adafed_result)
 
         # Aggregate custom metrics if aggregation fn was provided
@@ -209,10 +209,9 @@ class AdaFedStrategy(FedAvg):
             arrays=ArrayRecord.from_numpy_ndarrays(adafed_result),
         )
 
-        logger.log(INFO, f"✅ Completed aggregation for round {server_round}")
         logger.log(
             INFO,
-            f"Avg-train-accuracy: {metrics_aggregated.get('avg-val-accuracy', 0.0)} | Avg-train-loss: {metrics_aggregated.get('avg-train-loss', 0.0)}",
+            f"👉 Avg-train-accuracy: {metrics_aggregated.get('avg-val-accuracy', 0.0)} | Avg-train-loss: {metrics_aggregated.get('avg-train-loss', 0.0)}",
         )
 
         # Return the expected outputs for `fit`
@@ -276,10 +275,9 @@ class AdaFedStrategy(FedAvg):
 
         # Log metrics to W&B
         wandb.log(my_results, step=server_round)
-        logger.log(INFO, f"✅ Completed evaluation for round {server_round}")
         logger.log(
             INFO,
-            f"Avg-test-accuracy: {metrics_aggregated.get('avg-test-accuracy', 0.0)} | Avg-test-loss: {loss_aggregated}",
+            f"👉 Avg-test-accuracy: {metrics_aggregated.get('avg-test-accuracy', 0.0)} | Avg-test-loss: {loss_aggregated}",
         )
 
         # Return the expected outputs for `evaluate`
@@ -351,7 +349,7 @@ class AdaFedStrategy(FedAvg):
         for w in base_weights:
             shape, size = w.shape, np.prod(w.shape)
             delta = d_t[offset : offset + size].reshape(shape)
-            new_w = w + self.lr * delta
+            new_w = w - self.lr * delta
             new_weights.append(new_w)
             offset += size
         return new_weights
