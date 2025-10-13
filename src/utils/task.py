@@ -27,11 +27,17 @@ def train(
     prox_mu: float = 0.0,
     cli_strategy: str = "fedavg",
     personal_net=None,
-    local_epochs: int = 1,
-    q_ffl: float = 0.0,  # 0 = standard FedAvg
+    local_iterations: int = 1,
+    qffl: bool = False,
     momentum: float = 0.0,
+    local_learning_rate: float = 0.1,
+    lam: float = 1.0,
 ):
-    """Train the model on the training set with optional Q-FFL, FedProx, or Ditto."""
+    """Train the model on the training set with optional FedProx, or Ditto."""
+
+    # For q-FFL we need to compute loss on the whole training data, with respect to the starting point (the global model)
+    if qffl:
+        local_global_loss, _ = test(net, trainloader, device)
 
     net.to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
@@ -42,7 +48,7 @@ def train(
         global_params = [p.clone().detach() for p in net.parameters()]
         personal_net.to(device)
         personal_optimizer = torch.optim.SGD(
-            personal_net.parameters(), lr=learning_rate, momentum=momentum
+            personal_net.parameters(), lr=local_learning_rate, momentum=momentum
         )
 
     # FedProx global params
@@ -56,50 +62,15 @@ def train(
     total_loss = 0
     total_correct = 0
     total_personal_loss = 0
-
-    for i in range(max(epochs, local_epochs)):
+    for i in range(epochs):
         for batch in trainloader:
             images = batch["img"].to(device)
             labels = batch["label"].to(device)
 
-            if cli_strategy == "ditto":
-                # --- Step 1: Train global model as usual (FedAvg) ---
-                if i < epochs:
-                    optimizer.zero_grad()
-                    outputs = net(images)
-                    loss = criterion(outputs, labels)
-                    # Q-FFL adjustment
-                    if q_ffl > 0:
-                        loss = (loss ** (q_ffl + 1)) / q_ffl
-                    loss.backward()
-                    optimizer.step()
-                    total_loss += loss.item()
-
-                # --- Step 2: Train personalized model with proximal term to global model ---
-                if i < local_epochs:
-                    personal_optimizer.zero_grad()
-                    proximal_term = 0.0
-                    for local_w, global_w in zip(
-                        personal_net.parameters(), global_params
-                    ):
-                        proximal_term += (local_w - global_w).norm(2) ** 2
-
-                    personal_loss = criterion(personal_net(images), labels)
-                    if q_ffl > 0:
-                        personal_loss = (personal_loss ** (q_ffl + 1)) / q_ffl
-                    personal_loss += (prox_mu / 2) * proximal_term
-
-                    personal_loss.backward()
-                    personal_optimizer.step()
-                    total_personal_loss += personal_loss.item()
-
-            elif cli_strategy == "fedprox":
+            if cli_strategy == "fedprox":
                 optimizer.zero_grad()
                 outputs = net(images)
                 loss = criterion(outputs, labels)
-                # Q-FFL adjustment
-                if q_ffl > 0:
-                    loss = (loss ** (q_ffl + 1)) / q_ffl
                 proximal_term = 0.0
                 for local_w, global_w in zip(net.parameters(), global_params):
                     proximal_term += (local_w - global_w).norm(2) ** 2
@@ -108,30 +79,50 @@ def train(
                 optimizer.step()
                 total_loss += loss.item()
                 total_correct += (outputs.argmax(1) == labels).sum().item()
-
             else:
                 # --- FedAvg (default) ---
                 optimizer.zero_grad()
                 outputs = net(images)
                 loss = criterion(outputs, labels)
-                # Q-FFL adjustment
-                if q_ffl > 0:
-                    loss = (loss ** (q_ffl + 1)) / q_ffl
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
                 total_correct += (outputs.argmax(1) == labels).sum().item()
 
+            if cli_strategy == "ditto":
+                personal_optimizer.zero_grad()
+                outputs = personal_net(images)
+                loss = criterion(outputs, labels)
+
+                # proximal regularization term: λ/2 * ||v_k - w_t||^2
+                prox_term = 0.0
+                for p_local, p_global in zip(personal_net.parameters(), global_params):
+                    prox_term += torch.norm(p_local - p_global) ** 2
+                loss += (lam / 2) * prox_term
+
+                loss.backward()
+                personal_optimizer.step()
+                total_personal_loss += loss.item()
+
     train_loss = total_loss / len(trainloader)
     train_acc = total_correct / len(trainloader.dataset)
     val_loss, val_acc = test(net, valloader, device)
 
-    results = {
-        "train-loss": train_loss,
-        "train-accuracy": train_acc,
-        "val-loss": val_loss,
-        "val-accuracy": val_acc,
-    }
+    if qffl:
+        results = {
+            "train-loss": train_loss,
+            "train-accuracy": train_acc,
+            "val-loss": val_loss,
+            "val-accuracy": val_acc,
+            "local-global-loss": local_global_loss,
+        }
+    else:
+        results = {
+            "train-loss": train_loss,
+            "train-accuracy": train_acc,
+            "val-loss": val_loss,
+            "val-accuracy": val_acc,
+        }
     return results
 
 

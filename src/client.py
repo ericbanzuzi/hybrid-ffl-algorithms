@@ -1,6 +1,6 @@
 import torch
 from flwr.client import ClientApp, NumPyClient
-from flwr.common import Context
+from flwr.common import ArrayRecord, Context
 from torch.utils.data import DataLoader
 
 from src.models.cnn import CNN
@@ -22,6 +22,9 @@ class FlowerClient(NumPyClient):
         dataset: str = "cifar10",
         net_type: str = "CNN",
         group_norm: bool = True,
+        proximal_mu: float = 0.0,
+        qffl: bool = False,
+        lam: float = 1.0,
     ):
         """Initialize the client with data loaders, hyperparameters, and model."""
         if net_type == "resnet18":
@@ -38,26 +41,62 @@ class FlowerClient(NumPyClient):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.strategy = strategy
         self.dataset = dataset
+        self.proximal_mu = proximal_mu
+        self.qffl = qffl
+        self.personal_net = None
+        self.lam = lam
+
+        if (
+            strategy == "ditto"
+            and "personal_net" not in self.client_state.config_records
+        ):
+            if net_type == "resnet18":
+                self.personal_net = ResNet18(dataset=dataset, BN_to_GN=group_norm)
+            elif net_type == "rnn" or dataset in ["shakespeare"]:
+                self.personal_net = ShakespeareLSTM()
+            else:
+                self.personal_net = CNN(dataset=dataset)
+
+            self.client_state.config_records["personal_net"] = ArrayRecord(
+                get_weights(self.personal_net)
+            )
 
     def fit(self, parameters, config):
         """Train the model with data of this client."""
         set_weights(self.net, parameters)
-        prox_mu = config.get("proximal_mu", 0.0)
+
+        if self.strategy == "ditto":
+            set_weights(
+                self.personal_net, self.client_state.config_records["personal_net"]
+            )
+
         results = train(
-            self.net,
-            self.trainloader,
-            self.valloader,
-            self.local_epochs,
-            self.lr,
-            self.device,
-            prox_mu,
-            self.strategy,
+            net=self.net,
+            trainloader=self.trainloader,
+            valloader=self.valloader,
+            epochs=self.local_epochs,
+            learning_rate=self.lr,
+            device=self.device,
+            prox_mu=self.proximal_mu,
+            cli_strategy=self.strategy,
+            qffl=self.qffl,
+            personal_net=self.personal_net,
         )
+
+        if self.strategy == "ditto":
+            # after updating personal_net inside train()
+            self.client_state.config_records["personal_net"] = ArrayRecord(
+                get_weights(self.personal_net)
+            )
+
         return get_weights(self.net), len(self.trainloader.dataset), results
 
     def evaluate(self, parameters, config):
         """Evaluate the model on the data this client has."""
-        set_weights(self.net, parameters)
+        if self.strategy == "ditto":
+            set_weights(self.net, self.client_state.config_records["personal_net"])
+        else:
+            set_weights(self.net, parameters)
         loss, accuracy = test(self.net, self.valloader, self.device)
         return loss, len(self.valloader.dataset), {"accuracy": accuracy}
 
@@ -81,6 +120,9 @@ def client_fn(context: Context):
     cli_strategy = context.run_config.get("cli-strategy", "fedavg")
     selected_model = context.run_config.get("model", "CNN").lower()
     group_norm = context.run_config.get("group-norm", 0) == 1
+    proximal_mu = context.run_config.get("proximal-mu", 0.0)
+    qffl = context.run_config.get("agg-strategy") in ["qffl", "qfedavg"]
+    lam = context.run_config.get("lambda", 1)
 
     trainloader, valloader = load_data(
         partition_id, num_partitions, batch_size, dataset, seed, hparam_tuning
@@ -96,6 +138,9 @@ def client_fn(context: Context):
         dataset,
         selected_model,
         group_norm,
+        proximal_mu,
+        qffl,
+        lam,
     ).to_client()
 
 

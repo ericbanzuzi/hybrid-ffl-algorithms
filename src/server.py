@@ -11,6 +11,7 @@ from src.strategy.adafed import AdaFed
 from src.strategy.fedavg import CustomFedAvg
 from src.strategy.fedprox import CustomFedProx
 from src.strategy.fedyogi import CustomFedYogi
+from src.strategy.qfedavg import CustomQFedAvg
 from src.utils.task import get_weights
 
 
@@ -167,6 +168,13 @@ def server_fn(context: Context):
             **base_kwargs,
             proximal_mu=proximal_mu,
             cli_strategy=cli_strategy,
+            model_type=selected_model,
+            dataset=dataset,
+            seed=seed,
+        )
+    elif agg_strategy in ["qfedavg", "qffl"]:
+        strategy = CustomQFedAvg(
+            **base_kwargs,
             model_type=selected_model,
             dataset=dataset,
             seed=seed,

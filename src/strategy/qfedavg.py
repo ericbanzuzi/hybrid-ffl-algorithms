@@ -9,22 +9,26 @@ from flwr.common import (
     ArrayRecord,
     EvaluateRes,
     FitRes,
+    NDArrays,
     Parameters,
     Scalar,
     logger,
     ndarrays_to_parameters,
     parameters_to_ndarrays,
 )
+from flwr.common.logger import log
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import FedAvg
-from flwr.server.strategy.aggregate import aggregate, aggregate_inplace
+from flwr.server.strategy import QFedAvg
+from flwr.server.strategy.aggregate import aggregate_qffl
 
 import wandb
 
 
-class CustomFedAvg(FedAvg):
+# pylint: disable=too-many-locals
+class CustomQFedAvg(QFedAvg):
     """
-    A strategy that keeps the core functionality of FedAvg unchanged but enables
+    Configurable QFedAvg strategy implementation.
+    A strategy that keeps the core functionality of QFedAvg unchanged but enables
     additional features such as: Saving global checkpoints, saving metrics to the local
     file system as a JSON, pushing metrics to Weight & Biases.
     """
@@ -43,8 +47,8 @@ class CustomFedAvg(FedAvg):
         self.results_to_save = {}
 
         # Log those same metrics to W&B
-        project = f"fedavg-{dataset}-{model_type}"
-        wandb.init(project=project, name=f"fedavg-seed-{seed}")
+        project = f"qfedavg-{dataset}-{model_type}"
+        wandb.init(project=project, name=f"qfedavg-seed-{seed}")
         self.model_type = model_type
         self.dataset = dataset
         self.best_acc_so_far = 0.0  # Track best accuracy to save model checkpoints
@@ -66,7 +70,7 @@ class CustomFedAvg(FedAvg):
             self.best_acc_so_far = accuracy
             logger.log(INFO, "💡 New best global model found: %f", accuracy)
             # Save the PyTorch model
-            file_name = f"fedavg-round-{current_round}-seed-{self.seed}.pt"
+            file_name = f"qfedavg-round-{current_round}-seed-{self.seed}.pt"
             torch.save(
                 arrays.to_torch_state_dict(), f"{self.checkpoint_dir}/{file_name}"
             )
@@ -84,19 +88,50 @@ class CustomFedAvg(FedAvg):
         # Do not aggregate if there are failures and failures are not accepted
         if not self.accept_failures and failures:
             return None, {}
+        # Convert results
 
-        if self.inplace:
-            # Does in-place weighted average of results
-            aggregated_ndarrays = aggregate_inplace(results)
-        else:
-            # Convert results
-            weights_results = [
-                (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
-                for _, fit_res in results
+        def norm_grad(grad_list: NDArrays) -> float:
+            # input: nested gradients
+            # output: square of the L-2 norm
+            client_grads = grad_list[0]
+            for i in range(1, len(grad_list)):
+                client_grads = np.append(
+                    client_grads, grad_list[i]
+                )  # output a flattened array
+            squared = np.square(client_grads)
+            summed = np.sum(squared)
+            return float(summed)
+
+        deltas = []
+        hs_ffl = []
+
+        if self.pre_weights is None:
+            raise AttributeError("QffedAvg pre_weights are None in aggregate_fit")
+
+        weights_before = self.pre_weights
+
+        for _, fit_res in results:
+            new_weights = parameters_to_ndarrays(fit_res.parameters)
+            loss = fit_res.metrics["local-global-loss"]
+            # plug in the weight updates into the gradient
+            grads = [
+                np.multiply((u - v), 1.0 / self.learning_rate)
+                for u, v in zip(weights_before, new_weights)
             ]
-            aggregated_ndarrays = aggregate(weights_results)
+            deltas.append(
+                [np.float_power(loss + 1e-10, self.q_param) * grad for grad in grads]
+            )
+            # estimation of the local Lipschitz constant
+            hs_ffl.append(
+                self.q_param
+                * np.float_power(loss + 1e-10, (self.q_param - 1))
+                * norm_grad(grads)
+                + (1.0 / self.learning_rate)
+                * np.float_power(loss + 1e-10, self.q_param)
+            )
 
-        parameters_aggregated = ndarrays_to_parameters(aggregated_ndarrays)
+        weights_aggregated: NDArrays = aggregate_qffl(weights_before, deltas, hs_ffl)
+        parameters_aggregated = ndarrays_to_parameters(weights_aggregated)
 
         # Aggregate custom metrics if aggregation fn was provided
         metrics_aggregated = {}
@@ -104,7 +139,7 @@ class CustomFedAvg(FedAvg):
             fit_metrics = [(res.num_examples, res.metrics) for _, res in results]
             metrics_aggregated = self.fit_metrics_aggregation_fn(fit_metrics)
         elif server_round == 1:  # Only log this warning once
-            logger.log(WARNING, "No fit_metrics_aggregation_fn provided")
+            log(WARNING, "No fit_metrics_aggregation_fn provided")
 
         # Store metrics as dictionary
         my_results = metrics_aggregated
@@ -113,7 +148,7 @@ class CustomFedAvg(FedAvg):
 
         # Save metrics as json
         with open(
-            f"{self.results_dir}/fedavg-results-seed-{self.seed}.json", "w"
+            f"{self.results_dir}/qfedavg-results-seed-{self.seed}.json", "w"
         ) as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 
@@ -124,7 +159,7 @@ class CustomFedAvg(FedAvg):
         self._update_best_acc(
             current_round=server_round,
             accuracy=metrics_aggregated.get("avg-val-accuracy", 0.0),
-            arrays=ArrayRecord.from_numpy_ndarrays(aggregated_ndarrays),
+            arrays=ArrayRecord.from_numpy_ndarrays(weights_aggregated),
         )
 
         # Return the expected outputs for `fit`
@@ -181,7 +216,7 @@ class CustomFedAvg(FedAvg):
 
         # Save metrics as json
         with open(
-            f"{self.results_dir}/fedavg-results-seed-{self.seed}.json", "w"
+            f"{self.results_dir}/qfedavg-results-seed-{self.seed}.json", "w"
         ) as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 
