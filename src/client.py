@@ -29,7 +29,7 @@ class FlowerClient(NumPyClient):
         """Initialize the client with data loaders, hyperparameters, and model."""
         if net_type == "resnet18":
             self.net = ResNet18(dataset=dataset, BN_to_GN=group_norm)
-        elif net_type == "rnn" or dataset in ["shakespeare"]:
+        elif net_type in ["rnn", "lstm"] or dataset in ["shakespeare"]:
             self.net = ShakespeareLSTM()
         else:
             self.net = CNN(dataset=dataset)

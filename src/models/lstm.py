@@ -47,7 +47,7 @@ class ShakespeareLSTM(nn.Module):
         out, hidden = self.lstm(embed, hidden)
         final_hidden_state = out[:, -1, :]
         logits = self.fc(final_hidden_state)
-        return logits, hidden  # logit shape: (batch_size, vocab_size)
+        return logits  # logit shape: (batch_size, vocab_size)
 
 
 if __name__ == "__main__":
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # hidden = model.init_hidden(batch_size)
 
     # Pass the data through the model
-    output, _ = model(input_data)
+    output = model(input_data)
 
     # Output shape should be (batch_size, vocab_size)
     print(output.shape)  # Output should be: torch.Size([10, 80])

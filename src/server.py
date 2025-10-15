@@ -123,7 +123,7 @@ def server_fn(context: Context):
     # Initialize model parameters
     if selected_model == "resnet18":
         model = ResNet18(dataset=dataset, BN_to_GN=group_norm)
-    elif selected_model == "rnn" or dataset in ["shakespeare"]:
+    elif selected_model in ["rnn", "lstm"] or dataset in ["shakespeare"]:
         model = ShakespeareLSTM()
     else:
         model = CNN(dataset=dataset)

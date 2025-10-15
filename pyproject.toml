@@ -34,11 +34,11 @@ fraction-evaluate = 1
 learning-rate = 0.1
 agg-learning-rate = 0.1
 batch-size = 32
-dataset = "femnist"
-agg-strategy = "adafed"
+dataset = "shakespeare"
+agg-strategy = "fedavg"
 cli-strategy = "fedavg"
-proximal-mu = 0.5
-model = "cnn"
+proximal-mu = 0.1
+model = "lstm"
 yogi-server = 0
 adam-server = 0
 seed = 1
@@ -49,7 +49,7 @@ lambda = 1
 default = "local-simulation"
 
 [tool.flwr.federations.local-simulation]
-options.num-supernodes = 100  # number of clients
+options.num-supernodes = 10  # number of clients
 
 [tool.flwr.federations.local-simulation-gpu]
 options.num-supernodes = 500  # number of clients

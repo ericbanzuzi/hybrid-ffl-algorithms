@@ -6,12 +6,15 @@ from flwr_datasets.partitioner import DirichletPartitioner, NaturalIdPartitioner
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor
 
+from .language import letter_to_vec, word_to_indices
+
 fds = None  # global cache
 nid_to_cid = None  # mapping from partition index to character_id/writer_id for Shakespeare/FEMNIST
 malicious_clients = None  # list of malicious client partition IDs
 
 
 def prepare_shakespeare_fds(num_partitions: int = 31, seed: int = 42):
+    """Prepares the Shakespeare dataset for experiments"""
     # Partition dataset by character (speaker)
     base_fds = FederatedDataset(
         dataset="flwrlabs/shakespeare",
@@ -29,6 +32,7 @@ def prepare_shakespeare_fds(num_partitions: int = 31, seed: int = 42):
 
 
 def prepare_femnist_fds(num_partitions: int = 500, seed: int = 42):
+    """Prepares the FEMNIST dataset for experiments"""
     # Partition dataset by writer (writer_id)
     base_fds = FederatedDataset(
         dataset="flwrlabs/femnist",
@@ -84,7 +88,9 @@ def load_data(
         transforms = Compose(
             [
                 ToTensor(),
-                Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+                Normalize(
+                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+                ),  # CIFAR10 normalization values
             ]
         )
 
@@ -131,7 +137,9 @@ def load_data(
                 range(num_partitions), num_malicious_clients
             )
 
-        transforms = Compose([ToTensor(), Normalize((0.5,), (0.5,))])
+        transforms = Compose(
+            [ToTensor(), Normalize((0.1736,), (0.3317,))]
+        )  # Based on EMNIST byclass data
 
         def apply_transforms(batch, is_malicious_client: bool = False):
             batch = {
@@ -201,10 +209,11 @@ def load_data(
         partition_train_test = partition.train_test_split(test_size=0.2, seed=seed)
 
         def collate_fn(batch):
-            # TODO: appropriate padding/truncation and tokenization
-            x = torch.tensor([b["x"] for b in batch], dtype=torch.long)
-            y = torch.tensor([b["y"] for b in batch], dtype=torch.long)
-            return {"x": x, "y": y}
+            xs, ys = [], []
+            for data in batch:
+                xs.append(word_to_indices(data["x"]))
+                ys.append(letter_to_vec(data["y"]))
+            return {"img": torch.tensor(xs), "label": torch.tensor(ys)}
 
         trainloader = DataLoader(
             partition_train_test["train"],
