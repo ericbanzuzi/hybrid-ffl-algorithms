@@ -1,3 +1,4 @@
+import warnings
 from typing import List, Tuple
 
 import numpy as np
@@ -13,6 +14,8 @@ from src.strategy.fedprox import CustomFedProx
 from src.strategy.fedyogi import CustomFedYogi
 from src.strategy.qfedavg import CustomQFedAvg
 from src.utils.task import get_weights
+
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="wandb")
 
 
 # Define metric aggregation function

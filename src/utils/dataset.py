@@ -1,4 +1,5 @@
 import random
+import warnings
 
 import torch
 from flwr_datasets import FederatedDataset
@@ -16,6 +17,8 @@ malicious_clients = None  # list of malicious client partition IDs
 def prepare_shakespeare_fds(num_partitions: int = 31, seed: int = 42):
     """Prepares the Shakespeare dataset for experiments"""
     # Partition dataset by character (speaker)
+    warnings.filterwarnings("ignore", category=UserWarning, module="flwr_datasets")
+
     base_fds = FederatedDataset(
         dataset="flwrlabs/shakespeare",
         partitioners={"train": NaturalIdPartitioner(partition_by="character_id")},
@@ -67,6 +70,7 @@ def load_data(
     # --- CIFAR10 ---
     if dataset.lower() == "cifar10":
         if fds is None:
+            print("[INFO] Loading CIFAR10 dataset...")
             fds = FederatedDataset(
                 dataset="uoft-cs/cifar10",
                 partitioners={
@@ -84,6 +88,7 @@ def load_data(
                     ),
                 },
             )
+            print("[INFO] CIFAR10 dataset loaded.")
 
         transforms = Compose(
             [
@@ -144,7 +149,7 @@ def load_data(
         def apply_transforms(batch, is_malicious_client: bool = False):
             batch = {
                 "img": [transforms(img) for img in batch["image"]],
-                "label": [y for y in batch["character"]],
+                "label": batch["character"],
             }
 
             # Flip labels randomly (label poisoning)
@@ -205,26 +210,39 @@ def load_data(
         if fds is None:
             fds, nid_to_cid = prepare_shakespeare_fds(num_partitions, seed)
 
+        def apply_transforms(batch):
+            return {
+                "img": [torch.tensor(word_to_indices(data)) for data in batch["x"]],
+                "label": [
+                    torch.tensor(letter_to_vec(data)) for data in batch["y"]
+                ],  # class index, not one-hot
+            }
+
         partition = fds.load_partition(nid_to_cid[partition_id])
         partition_train_test = partition.train_test_split(test_size=0.2, seed=seed)
 
-        def collate_fn(batch):
-            xs, ys = [], []
-            for data in batch:
-                xs.append(word_to_indices(data["x"]))
-                ys.append(letter_to_vec(data["y"]))
-            return {"img": torch.tensor(xs), "label": torch.tensor(ys)}
+        if hparam_tuning:
+            partition_train = partition_train_test["train"].with_transform(
+                apply_transforms
+            )
+            # Divide data on each node: 80% train, 20% validation
+            partition_train_val = partition_train.train_test_split(
+                test_size=0.2, seed=seed
+            )
 
-        trainloader = DataLoader(
-            partition_train_test["train"],
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=collate_fn,
-        )
-        testloader = DataLoader(
-            partition_train_test["test"], batch_size=batch_size, collate_fn=collate_fn
-        )
+            trainloader = DataLoader(
+                partition_train_val["train"], batch_size=batch_size, shuffle=True
+            )
+            testloader = DataLoader(partition_train_val["test"], batch_size=batch_size)
+        else:
+            partition_train_test = partition_train_test.with_transform(apply_transforms)
+            trainloader = DataLoader(
+                partition_train_test["train"],
+                batch_size=batch_size,
+                shuffle=True,
+            )
+            testloader = DataLoader(partition_train_test["test"], batch_size=batch_size)
+
         return trainloader, testloader
-
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")
