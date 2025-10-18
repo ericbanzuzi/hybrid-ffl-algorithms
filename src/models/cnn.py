@@ -20,11 +20,10 @@ class CNN(nn.Module):
     """
     Simple CNN model for FEMNIST based on https://arxiv.org/abs/2012.04221
 
-    :in_channels: Number of input channels
-    :num_classes: Number of output classes
+    :dataset: Dataset to be used (FEMNIST or CIFAR10)
     """
 
-    def __init__(self, dataset: str = None):
+    def __init__(self, dataset: str = "femnist"):
         super().__init__()
         in_channels = IN_CHANNELS.get(dataset, 1)
         num_classes = NUM_CLASSES.get(dataset, 62)
@@ -62,10 +61,39 @@ class CNN(nn.Module):
 
 class CNNCifar(nn.Module):
     """
+    A more complex but still fairly simple CNN model based on https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10584508
+
+    :dataset: Dataset to be used (FEMNIST or CIFAR10)
+    """
+
+    def __init__(self, dataset: str = "cifar10"):
+        super(CNNCifar, self).__init__()
+        in_channels = IN_CHANNELS.get(dataset, 3)
+        num_classes = NUM_CLASSES.get(dataset, 10)
+        self.conv1 = nn.Conv2d(in_channels, 64, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.fc1 = nn.Linear(256 * 4 * 4, 512)
+        self.fc2 = nn.Linear(512, num_classes)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(p=0.5)
+
+    def forward(self, x):
+        x = self.pool(self.relu(self.conv1(x)))
+        x = self.pool(self.relu(self.conv2(x)))
+        x = self.pool(self.relu(self.conv3(x)))
+        x = torch.flatten(x, 1)
+        x = self.dropout(self.relu(self.fc1(x)))
+        x = self.fc2(x)
+        return x
+
+
+class SimpleCNN(nn.Module):
+    """
     Simple CNN model based on https://arxiv.org/pdf/1602.05629
 
-    :in_channels: Number of input channels
-    :num_classes: Number of output classes
+    :dataset: Dataset to be used (FEMNIST or CIFAR10)
     """
 
     def __init__(self, dataset: str = None):
@@ -97,8 +125,7 @@ class CNNMnist(nn.Module):
     """
     Simple CNN model for FEMNIST based on https://arxiv.org/pdf/2501.03392
 
-    :in_channels: Number of input channels
-    :num_classes: Number of output classes
+    :dataset: Dataset to be used (FEMNIST or CIFAR10)
     """
 
     def __init__(self, dataset: str = None):
@@ -123,11 +150,14 @@ class CNNMnist(nn.Module):
 
 
 if __name__ == "__main__":
+    print("\nCNN:")
+    summary(CNN(dataset="femnist"), input_size=(1, 1, 28, 28))
+
     print("\nCNNCifar:")
     summary(CNNCifar(dataset="cifar10"), input_size=(1, 3, 32, 32))
 
     print("\nCNNMnist:")
     summary(CNNMnist(dataset="femnist"), input_size=(1, 1, 28, 28))
 
-    print("\nCNN:")
-    summary(CNN(dataset="femnist"), input_size=(1, 1, 28, 28))
+    print("\nSimpleCNN:")
+    summary(SimpleCNN(dataset="cifar10"), input_size=(1, 3, 32, 32))

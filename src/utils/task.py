@@ -21,9 +21,9 @@ def train(
     net,
     trainloader: DataLoader,
     valloader: DataLoader,
-    epochs: int,
     learning_rate: float,
     device,
+    epochs: int = 1,
     prox_mu: float = 0.0,
     cli_strategy: str = "fedavg",
     personal_net=None,
@@ -59,10 +59,10 @@ def train(
     if cli_strategy == "ditto":
         personal_net.train()
 
-    total_loss = 0
-    total_correct = 0
-    total_personal_loss = 0
     for i in range(epochs):
+        total_loss = 0
+        total_correct = 0
+        total_personal_loss = 0
         for batch in trainloader:
             images = batch["img"].to(device)
             labels = batch["label"].to(device)
@@ -104,8 +104,10 @@ def train(
                 personal_optimizer.step()
                 total_personal_loss += loss.item()
 
-    train_loss = total_loss / len(trainloader)
-    train_acc = total_correct / len(trainloader.dataset)
+        # Send back latest avg train loss and accuracy
+        train_loss = total_loss / len(trainloader)
+        train_acc = total_correct / len(trainloader.dataset)
+
     val_loss, val_acc = test(net, valloader, device)
 
     if qffl:

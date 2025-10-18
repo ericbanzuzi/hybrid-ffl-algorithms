@@ -18,7 +18,5 @@ login:
 wandb-key:
 	@echo $(WANDB_KEY)
 
-demo-experiment:
-	@echo "Starting the demo experiment..."
-	@./experiments/placeholder.sh
-	@echo "Experiment completed!✅"
+femnist-fedavg-experiment:
+	@SEED=$(seed) ./experiments/fedavg-femnist.sh

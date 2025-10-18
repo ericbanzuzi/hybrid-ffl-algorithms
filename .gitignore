@@ -178,3 +178,4 @@ wandb
 experiment-results
 checkpoints
 data
+*.txt

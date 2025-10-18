@@ -1,11 +1,13 @@
+import random
 import warnings
 from typing import List, Tuple
 
 import numpy as np
+import torch
 from flwr.common import Context, Metrics, ndarrays_to_parameters
 from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 
-from src.models.cnn import CNN
+from src.models.cnn import CNN, CNNCifar
 from src.models.lstm import ShakespeareLSTM
 from src.models.resnet import ResNet18
 from src.strategy.adafed import AdaFed
@@ -38,33 +40,49 @@ def on_fit_config(server_round: int) -> dict:
     return config
 
 
-def aggregate_eval_metrics(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-    """
-    Aggregates client metrics to compute:
-    - Mean accuracy (unweighted)
-    - Standard deviation of accuracies (unweighted)
-    - Worst and best 10% accuracies (unweighted)
-    - Mean loss (unweighted)
-    """
-    accuracies = np.array([metric["accuracy"] for _, metric in metrics])
+def eval_metrics_aggregator(
+    store_client_accs: bool = False, file_name: str = "output.txt"
+):
+    def aggregate_eval_metrics(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+        """
+        Aggregates client metrics to compute:
+        - Mean accuracy (unweighted)
+        - Standard deviation of accuracies (unweighted)
+        - Worst and best 10% accuracies (unweighted)
+        - Mean loss (unweighted)
+        """
+        accuracies = np.array([metric["accuracy"] for _, metric in metrics])
 
-    # Mean accuracy and standard deviation (unweighted, across clients)
-    mean_acc = float(np.mean(accuracies))
-    std = float(np.std(accuracies, ddof=0))
+        # Mean accuracy and standard deviation (unweighted, across clients)
+        mean_acc = np.mean(accuracies)
+        std = np.std(accuracies, ddof=0)
 
-    # Worst 10% and best 10% (you can adjust to 5% if needed)
-    sorted_acc = np.sort(accuracies)
-    k = len(sorted_acc)
-    n10 = max(1, int(0.1 * k))
-    worst_10_mean = float(np.mean(sorted_acc[:n10]))
-    best_10_mean = float(np.mean(sorted_acc[-n10:]))
+        # Worst 10% and best 10% (you can adjust to 5% if needed)
+        sorted_acc = np.sort(accuracies)
+        k = len(sorted_acc)
+        n10 = max(1, int(0.1 * k))
+        worst_10_mean = np.mean(sorted_acc[:n10])
+        best_10_mean = np.mean(sorted_acc[-n10:])
 
-    return {
-        "avg-test-accuracy": mean_acc,
-        "std-test-accuracy": std,
-        "worst-10": worst_10_mean,
-        "best-10": best_10_mean,
-    }
+        if store_client_accs:
+            with open(file_name, "a") as file:
+                np.savetxt(file, accuracies.reshape(1, -1), delimiter=",")
+
+            return {
+                "avg-test-accuracy": mean_acc,
+                "std-test-accuracy": std,
+                "worst-10": worst_10_mean,
+                "best-10": best_10_mean,
+            }
+        else:
+            return {
+                "avg-test-accuracy": mean_acc,
+                "std-test-accuracy": std,
+                "worst-10": worst_10_mean,
+                "best-10": best_10_mean,
+            }
+
+    return aggregate_eval_metrics
 
 
 def aggregate_fit_metrics(
@@ -78,20 +96,20 @@ def aggregate_fit_metrics(
     - Mean loss (unweighted)
     """
     train_accuracies = np.array([metric["train-accuracy"] for _, metric in metrics])
-    train_losses = np.array([metric.get("train-loss", 0.0) for _, metric in metrics])
+    train_losses = np.array([metric["train-loss"] for _, metric in metrics])
 
     # Mean accuracy, standard deviation, mean loss (unweighted, across clients)
-    mean_acc_train = float(np.mean(train_accuracies))
-    std_acc_train = float(np.std(train_accuracies, ddof=0))
-    mean_loss_train = float(np.mean(train_losses))
+    mean_acc_train = np.mean(train_accuracies)
+    std_acc_train = np.std(train_accuracies, ddof=0)
+    mean_loss_train = np.mean(train_losses)
 
-    val_accuracies = np.array([metric["val-accuracy"] for _, metric in metrics])
-    val_losses = np.array([metric.get("val-loss", 0.0) for _, metric in metrics])
+    val_accuracies = [metric["val-accuracy"] for _, metric in metrics]
+    val_losses = [metric["val-loss"] for _, metric in metrics]
 
     # Mean accuracy, standard deviation, mean loss (unweighted, across clients)
-    mean_acc_val = float(np.mean(val_accuracies))
-    std_val = float(np.std(val_accuracies, ddof=0))
-    mean_loss_val = float(np.mean(val_losses))
+    mean_acc_val = np.mean(val_accuracies)
+    std_val = np.std(val_accuracies, ddof=0)
+    mean_loss_val = np.mean(val_losses)
 
     return {
         "avg-train-accuracy": mean_acc_train,
@@ -122,23 +140,32 @@ def server_fn(context: Context):
     cli_strategy = context.run_config.get("cli-strategy", "fedavg").lower()
     gamma = context.run_config.get("gamma", 1.0)
     tau = context.run_config.get("lambda", 1.0)
+    client_acc_file = context.run_config.get("client-acc-file", "client-accs")
+    client_acc_file = f"{client_acc_file}-seed-{seed}.txt"
 
+    random.seed(seed)
+    torch.manual_seed(seed)
     # Initialize model parameters
     if selected_model == "resnet18":
         model = ResNet18(dataset=dataset, BN_to_GN=group_norm)
     elif selected_model in ["rnn", "lstm"] or dataset in ["shakespeare"]:
         model = ShakespeareLSTM()
+    elif selected_model == "cnn-cifar":
+        model = CNNCifar(dataset=dataset)
     else:
         model = CNN(dataset=dataset)
 
     ndarrays = get_weights(model)
     parameters = ndarrays_to_parameters(ndarrays)
 
+    aggregate_eval_metrics_fn = eval_metrics_aggregator(
+        context.run_config.get("store-client-accs", 0) == 1, client_acc_file
+    )
     base_kwargs = {
         "fraction_fit": context.run_config["fraction-fit"],
         "fraction_evaluate": context.run_config["fraction-evaluate"],
         "min_available_clients": context.run_config.get("min-clients", 2),
-        "evaluate_metrics_aggregation_fn": aggregate_eval_metrics,
+        "evaluate_metrics_aggregation_fn": aggregate_eval_metrics_fn,
         "fit_metrics_aggregation_fn": aggregate_fit_metrics,
         "initial_parameters": parameters,
     }
@@ -169,6 +196,7 @@ def server_fn(context: Context):
     elif agg_strategy in ["fedyogi", "yogi"]:
         strategy = CustomFedYogi(
             **base_kwargs,
+            eta=lr,
             proximal_mu=proximal_mu,
             cli_strategy=cli_strategy,
             model_type=selected_model,
@@ -188,6 +216,7 @@ def server_fn(context: Context):
             model_type=selected_model,
             dataset=dataset,
             seed=seed,
+            num_rounds=num_rounds,
         )
 
     config = ServerConfig(num_rounds=num_rounds)

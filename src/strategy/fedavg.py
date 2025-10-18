@@ -34,6 +34,7 @@ class CustomFedAvg(FedAvg):
         model_type: str = "cnn",
         dataset: str = "femnist",
         seed: int = 42,
+        num_rounds: int = None,
         *args,
         **kwargs,
     ):
@@ -49,6 +50,7 @@ class CustomFedAvg(FedAvg):
         self.dataset = dataset
         self.best_acc_so_far = 0.0  # Track best accuracy to save model checkpoints
         self.seed = seed
+        self.num_rounds = num_rounds
 
         self.results_dir = f"./experiment-results/{dataset}-{model_type}/"
         if not os.path.exists(self.results_dir):
@@ -62,7 +64,7 @@ class CustomFedAvg(FedAvg):
         self, current_round: int, accuracy: float, arrays: ArrayRecord
     ) -> None:
         """Update best accuracy and save model checkpoint if current accuracy is higher."""
-        if accuracy > self.best_acc_so_far:
+        if accuracy > self.best_acc_so_far or current_round == self.num_rounds:
             self.best_acc_so_far = accuracy
             logger.log(INFO, "💡 New best global model found: %f", accuracy)
             # Save the PyTorch model

@@ -1,9 +1,11 @@
+import random
+
 import torch
 from flwr.client import ClientApp, NumPyClient
 from flwr.common import ArrayRecord, Context
 from torch.utils.data import DataLoader
 
-from src.models.cnn import CNN
+from src.models.cnn import CNN, CNNCifar
 from src.models.lstm import ShakespeareLSTM
 from src.models.resnet import ResNet18
 from src.utils.dataset import load_data
@@ -27,10 +29,13 @@ class FlowerClient(NumPyClient):
         lam: float = 1.0,
     ):
         """Initialize the client with data loaders, hyperparameters, and model."""
+
         if net_type == "resnet18":
             self.net = ResNet18(dataset=dataset, BN_to_GN=group_norm)
         elif net_type in ["rnn", "lstm"] or dataset in ["shakespeare"]:
             self.net = ShakespeareLSTM()
+        elif net_type == "cnn-cifar":
+            self.net = CNNCifar(dataset=dataset)
         else:
             self.net = CNN(dataset=dataset)
 
@@ -124,6 +129,8 @@ def client_fn(context: Context):
     qffl = context.run_config.get("agg-strategy") in ["qffl", "qfedavg"]
     lam = context.run_config.get("lambda", 1)
 
+    random.seed(seed)
+    torch.manual_seed(seed)
     trainloader, valloader = load_data(
         partition_id, num_partitions, batch_size, dataset, seed, hparam_tuning
     )
