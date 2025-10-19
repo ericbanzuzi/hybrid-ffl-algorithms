@@ -19,4 +19,7 @@ wandb-key:
 	@echo $(WANDB_KEY)
 
 fedavg-femnist-experiment:
-	@SEED=$(seed) ./experiments/fedavg-femnist.sh
+	@nohup env SEED=$(seed) bash ./experiments/fedavg-femnist.sh > output.log 2>&1 &
+
+fedavg-cifar-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar.sh > output.log 2>&1 &

@@ -27,25 +27,25 @@ serverapp = "src.server:app"
 clientapp = "src.client:app"
 
 [tool.flwr.app.config]
-num-server-rounds = 500
-fraction-fit = 0.03
+num-server-rounds = 5
+fraction-fit = 1
 local-epochs = 1
 fraction-evaluate = 1
-learning-rate = 0.1
+learning-rate = 0.01
 agg-learning-rate = 0.1
 batch-size = 32
-dataset = "femnist"
+dataset = "cifar10"
 agg-strategy = "fedavg"
 cli-strategy = "fedavg"
 proximal-mu = 0.1
-model = "cnn"
+model = "cnncifar"
 yogi-server = 0
 adam-server = 0
-seed = 0
+seed = 123
 gamma = 1
 lambda = 1
 store-client-accs = 1
-client-acc-file = "fedavg-femnist-accs"
+client-acc-file = "fedavg-cifar10-accs"
 
 [tool.flwr.federations]
 default = "local-simulation"
@@ -53,7 +53,15 @@ default = "local-simulation"
 [tool.flwr.federations.local-simulation]
 options.num-supernodes = 355  # number of clients
 
-[tool.flwr.federations.local-simulation-gpu]
-options.num-supernodes = 500  # number of clients
-options.backend.client-resources.num-cpus = 2 # each ClientApp assumes to use 2CPUs
-options.backend.client-resources.num-gpus = 0.2 # at most 5 ClientApp will run in a given GPU
+[tool.flwr.federations.gpu-simulation]
+options.num-supernodes = 100  # number of clients
+options.backend.client-resources.num-cpus = 1 # each ClientApp assumes to use 2CPUs
+options.backend.client-resources.num-gpus = 0.1 # at most 5 ClientApp will run in a given GPU
+
+[tool.flwr.federations.femnist-sim]
+options.num-supernodes = 355  # number of clients
+
+[tool.flwr.federations.cifar10-sim]
+options.num-supernodes = 10  # number of clients
+options.backend.client-resources.num-cpus = 1 # each ClientApp assumes to use 2CPUs
+options.backend.client-resources.num-gpus = 0.1 # at most 5 ClientApp will run in a given GPU

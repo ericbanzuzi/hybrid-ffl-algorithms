@@ -13,21 +13,21 @@ SEED_LIST="${SEED:-1}"
 IFS=',' read -ra SEEDS <<< "$SEED_LIST"
 
 RUN_CONFIG='\
-num-server-rounds=500 \
+num-server-rounds=100 \
 agg-strategy="fedavg" \
 cli-strategy="fedavg" \
-dataset="femnist" \
-model="cnn" \
+dataset="cifar10" \
+model="resnet18" \
 batch-size=32 \
-learning-rate=0.1 \
-fraction-fit=0.03 \
+learning-rate=0.01 \
+fraction-fit=1 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-client-acc-file="fedavg-femnist-accs"'
+client-acc-file="fedavg-cifar10-accs-res"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do
-  echo "🔁 Running FedAvg on FEMNIST with seed=$SEED_VAL"
-  flwr run . femnist-sim --run-config "$RUN_CONFIG seed=$SEED_VAL"
+  echo "🔁 Running FedAvg on CIFAR10 with seed=$SEED_VAL"
+  flwr run . cifar10-sim --run-config "$RUN_CONFIG seed=$SEED_VAL"
   echo "✅ Experiment completed for seed=$SEED_VAL!"
 done

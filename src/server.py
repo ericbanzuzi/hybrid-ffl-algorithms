@@ -1,3 +1,4 @@
+import os
 import random
 import warnings
 from typing import List, Tuple
@@ -65,7 +66,8 @@ def eval_metrics_aggregator(
         best_10_mean = np.mean(sorted_acc[-n10:])
 
         if store_client_accs:
-            with open(file_name, "a") as file:
+            os.makedirs("./accuracies/", exist_ok=True)
+            with open(f"./accuracies/{file_name}", "a") as file:
                 np.savetxt(file, accuracies.reshape(1, -1), delimiter=",")
 
             return {
