@@ -28,7 +28,7 @@ clientapp = "src.client:app"
 
 [tool.flwr.app.config]
 num-server-rounds = 500
-fraction-fit = 0.1
+fraction-fit = 0.03
 local-epochs = 1
 fraction-evaluate = 1
 learning-rate = 0.1

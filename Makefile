@@ -18,5 +18,5 @@ login:
 wandb-key:
 	@echo $(WANDB_KEY)
 
-femnist-fedavg-experiment:
+fedavg-femnist-experiment:
 	@SEED=$(seed) ./experiments/fedavg-femnist.sh

@@ -13,13 +13,14 @@ SEED_LIST="${SEED:-1}"
 IFS=',' read -ra SEEDS <<< "$SEED_LIST"
 
 RUN_CONFIG='\
+num-server-rounds=500 \
 agg-strategy="fedavg" \
 cli-strategy="fedavg" \
 dataset="femnist" \
 model="cnn" \
 batch-size=32 \
 learning-rate=0.1 \
-fraction-fit=0.1 \
+fraction-fit=0.03 \
 fraction-evaluate=1 \
 store-client-accs=1 \
 client-acc-file="fedavg-femnist-accs"'
