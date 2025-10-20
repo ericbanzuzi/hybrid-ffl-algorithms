@@ -17,14 +17,13 @@ num-server-rounds=100 \
 agg-strategy="fedavg" \
 cli-strategy="fedavg" \
 dataset="cifar10" \
-model="resnet18" \
-batch-size=32 \
+model="cnn-cifar" \
+batch-size=64 \
 learning-rate=0.01 \
 fraction-fit=1 \
 fraction-evaluate=1 \
-group-norm=1 \
 store-client-accs=1 \
-client-acc-file="fedavg-cifar10-accs-res-gn"'
+client-acc-file="fedavg-cifar10-accs-cnn-cifar"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

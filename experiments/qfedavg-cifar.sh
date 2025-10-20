@@ -13,20 +13,19 @@ SEED_LIST="${SEED:-1}"
 IFS=',' read -ra SEEDS <<< "$SEED_LIST"
 
 RUN_CONFIG='\
-num-server-rounds=2 \
+num-server-rounds=100 \
 agg-strategy="qfedavg" \
 cli-strategy="fedavg" \
 dataset="cifar10" \
-model="resnet18" \
-batch-size=32 \
+model="cnn-cifar" \
+batch-size=64 \
 learning-rate=0.01 \
 agg-learning-rate=0.01 \
 fraction-fit=1 \
 fraction-evaluate=1 \
-group-norm=1 \
 store-client-accs=1 \
 qparam = 10 \
-client-acc-file="qfedavg-cifar10-accs-res-gn"'
+client-acc-file="qfedavg-cifar10-accs-cnn-cifar-q10"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do
