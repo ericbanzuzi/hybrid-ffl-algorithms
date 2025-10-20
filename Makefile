@@ -23,3 +23,6 @@ fedavg-femnist-experiment:
 
 fedavg-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar.sh > output.log 2>&1 &
+
+qfedavg-cifar-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/qfedavg-cifar.sh > output.log 2>&1 &

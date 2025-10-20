@@ -59,6 +59,8 @@ class FlowerClient(NumPyClient):
                 self.personal_net = ResNet18(dataset=dataset, BN_to_GN=group_norm)
             elif net_type == "rnn" or dataset in ["shakespeare"]:
                 self.personal_net = ShakespeareLSTM()
+            elif net_type == "cnn-cifar":
+                self.personal_net = CNNCifar(dataset=dataset)
             else:
                 self.personal_net = CNN(dataset=dataset)
 
@@ -137,17 +139,17 @@ def client_fn(context: Context):
 
     # Return Client instance
     return FlowerClient(
-        trainloader,
-        valloader,
-        local_epochs,
-        learning_rate,
-        cli_strategy,
-        dataset,
-        selected_model,
-        group_norm,
-        proximal_mu,
-        qffl,
-        lam,
+        trainloader=trainloader,
+        valloader=valloader,
+        local_epochs=local_epochs,
+        learning_rate=learning_rate,
+        strategy=cli_strategy,
+        dataset=dataset,
+        net_type=selected_model,
+        group_norm=group_norm,
+        proximal_mu=proximal_mu,
+        qffl=qffl,
+        lam=lam,
     ).to_client()
 
 

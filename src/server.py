@@ -144,6 +144,7 @@ def server_fn(context: Context):
     tau = context.run_config.get("lambda", 1.0)
     client_acc_file = context.run_config.get("client-acc-file", "client-accs")
     client_acc_file = f"{client_acc_file}-seed-{seed}.txt"
+    q_param = context.run_config.get("qparam", 0.1)
 
     random.seed(seed)
     torch.manual_seed(seed)
@@ -211,6 +212,8 @@ def server_fn(context: Context):
             model_type=selected_model,
             dataset=dataset,
             seed=seed,
+            q_param=q_param,
+            qffl_learning_rate=lr,
         )
     else:
         strategy = CustomFedAvg(

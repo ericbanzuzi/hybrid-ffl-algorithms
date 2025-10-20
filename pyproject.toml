@@ -44,8 +44,10 @@ adam-server = 0
 seed = 123
 gamma = 1
 lambda = 1
+group-norm = 1
 store-client-accs = 1
 client-acc-file = "fedavg-cifar10-accs"
+qparam=0.1
 
 [tool.flwr.federations]
 default = "local-simulation"
