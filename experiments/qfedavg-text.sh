@@ -16,20 +16,20 @@ RUN_CONFIG='\
 num-server-rounds=500 \
 agg-strategy="qfedavg" \
 cli-strategy="fedavg" \
-dataset="femnist" \
-model="cnn" \
-batch-size=32 \
-learning-rate=0.1 \
-agg-learning-rate=0.01 \
-fraction-fit=0.03 \
+dataset="shakespeare" \
+model="lstm" \
+batch-size=10 \
+learning-rate=0.8 \
+agg-learning-rate=0.8 \
+fraction-fit=0.33 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-qparam = 0.1 \
-client-acc-file="qfedavg-femnist-accs"'
+qparam = 0.001 \
+client-acc-file="qfedavg-text-accs-q001"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do
-  echo "🔁 Running q-FedAvg on FEMNIST with seed=$SEED_VAL"
-  flwr run . femnist-sim --run-config "$RUN_CONFIG seed=$SEED_VAL"
+  echo "🔁 Running q-FedAvg on SHAKESPEARE with seed=$SEED_VAL"
+  flwr run . text-sim --run-config "$RUN_CONFIG seed=$SEED_VAL"
   echo "✅ Experiment completed for seed=$SEED_VAL!"
 done

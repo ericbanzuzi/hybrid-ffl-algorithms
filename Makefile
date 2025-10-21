@@ -32,3 +32,9 @@ fedavg-cifar-experiment:
 
 qfedavg-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/qfedavg-cifar.sh > output.log 2>&1 &
+
+fedavg-text-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/fedavg-text.sh > output.log 2>&1 &
+
+qfedavg-text-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/qfedavg-text.sh > output.log 2>&1 &
