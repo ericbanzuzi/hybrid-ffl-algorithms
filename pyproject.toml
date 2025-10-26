@@ -13,7 +13,8 @@ dependencies = [
     "torch==2.2.2",
     "torchvision==0.17.2",
     "wandb==0.22.2",
-    "torchinfo>=1.8.0"
+    "torchinfo>=1.8.0",
+    "numpy<2.0"
 ]
 
 [tool.hatch.build.targets.wheel]

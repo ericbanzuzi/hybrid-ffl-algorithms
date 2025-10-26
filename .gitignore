@@ -179,3 +179,4 @@ experiment-results
 checkpoints
 data
 *.txt
+!analysis/**
