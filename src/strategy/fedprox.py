@@ -34,6 +34,8 @@ class CustomFedProx(FedProx):
         model_type: str = "cnn",
         dataset: str = "femnist",
         seed: int = 42,
+        num_rounds: int = None,
+        save_model: bool = False,
         *args,
         **kwargs,
     ):
@@ -49,6 +51,8 @@ class CustomFedProx(FedProx):
         self.dataset = dataset
         self.best_acc_so_far = 0.0  # Track best accuracy to save model checkpoints
         self.seed = seed
+        self.num_rounds = num_rounds
+        self.save_model = save_model
 
         self.results_dir = f"./experiment-results/{dataset}-{model_type}/"
         if not os.path.exists(self.results_dir):
@@ -62,7 +66,9 @@ class CustomFedProx(FedProx):
         self, current_round: int, accuracy: float, arrays: ArrayRecord
     ) -> None:
         """Update best accuracy and save model checkpoint if current accuracy is higher."""
-        if accuracy > self.best_acc_so_far:
+        if self.save_model and (
+            accuracy > self.best_acc_so_far or current_round == self.num_rounds
+        ):
             self.best_acc_so_far = accuracy
             logger.log(INFO, "💡 New best global model found: %f", accuracy)
             # Save the PyTorch model

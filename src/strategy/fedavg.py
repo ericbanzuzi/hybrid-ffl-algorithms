@@ -35,6 +35,8 @@ class CustomFedAvg(FedAvg):
         dataset: str = "femnist",
         seed: int = 42,
         num_rounds: int = None,
+        save_model: bool = False,
+        cli_strategy: str = "fedavg",
         *args,
         **kwargs,
     ):
@@ -44,13 +46,20 @@ class CustomFedAvg(FedAvg):
         self.results_to_save = {}
 
         # Log those same metrics to W&B
-        project = f"fedavg-{dataset}-{model_type}"
-        wandb.init(project=project, name=f"fedavg-seed-{seed}")
+        if cli_strategy != "fedavg":
+            project = f"fedavg-{cli_strategy}-{dataset}-{model_type}"
+            wandb.init(project=project, name=f"fedavg-{cli_strategy}-seed-{seed}")
+        else:
+            project = f"fedavg-{dataset}-{model_type}"
+            wandb.init(project=project, name=f"fedavg-seed-{seed}")
+
         self.model_type = model_type
         self.dataset = dataset
         self.best_acc_so_far = 0.0  # Track best accuracy to save model checkpoints
         self.seed = seed
         self.num_rounds = num_rounds
+        self.save_model = save_model
+        self.cli_strategy = cli_strategy
 
         self.results_dir = f"./experiment-results/{dataset}-{model_type}/"
         if not os.path.exists(self.results_dir):
@@ -64,11 +73,16 @@ class CustomFedAvg(FedAvg):
         self, current_round: int, accuracy: float, arrays: ArrayRecord
     ) -> None:
         """Update best accuracy and save model checkpoint if current accuracy is higher."""
-        if accuracy > self.best_acc_so_far or current_round == self.num_rounds:
+        if self.save_model and (
+            accuracy > self.best_acc_so_far or current_round == self.num_rounds
+        ):
             self.best_acc_so_far = accuracy
             logger.log(INFO, "💡 New best global model found: %f", accuracy)
             # Save the PyTorch model
-            file_name = f"fedavg-round-{current_round}-seed-{self.seed}.pt"
+            if self.cli_strategy != "fedavg":
+                file_name = f"fedavg-{self.cli_strategy}-round-{current_round}-seed-{self.seed}.pt"
+            else:
+                file_name = f"fedavg-round-{current_round}-seed-{self.seed}.pt"
             torch.save(
                 arrays.to_torch_state_dict(), f"{self.checkpoint_dir}/{file_name}"
             )
@@ -114,9 +128,11 @@ class CustomFedAvg(FedAvg):
         self.results_to_save[server_round] = my_results
 
         # Save metrics as json
-        with open(
-            f"{self.results_dir}/fedavg-results-seed-{self.seed}.json", "w"
-        ) as json_file:
+        if self.cli_strategy != "fedavg":
+            json_path = f"{self.results_dir}/fedavg-{self.cli_strategy}-results-seed-{self.seed}.json"
+        else:
+            json_path = f"{self.results_dir}/fedavg-results-seed-{self.seed}.json"
+        with open(json_path, "w") as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 
         # Log metrics to W&B
@@ -182,9 +198,11 @@ class CustomFedAvg(FedAvg):
         }
 
         # Save metrics as json
-        with open(
-            f"{self.results_dir}/fedavg-results-seed-{self.seed}.json", "w"
-        ) as json_file:
+        if self.cli_strategy != "fedavg":
+            json_path = f"{self.results_dir}/fedavg-{self.cli_strategy}-results-seed-{self.seed}.json"
+        else:
+            json_path = f"{self.results_dir}/fedavg-results-seed-{self.seed}.json"
+        with open(json_path, "w") as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 
         # Log metrics to W&B

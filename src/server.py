@@ -11,7 +11,6 @@ from flwr.server import ServerApp, ServerAppComponents, ServerConfig
 from src.models.cnn import CNN, CNNCifar
 from src.models.lstm import ShakespeareLSTM
 from src.models.resnet import ResNet18
-from src.strategy.adafed import AdaFed
 from src.strategy.fedavg import CustomFedAvg
 from src.strategy.fedprox import CustomFedProx
 from src.strategy.fedyogi import CustomFedYogi
@@ -131,8 +130,6 @@ def server_fn(context: Context):
     dataset = context.run_config.get("dataset", "femnist").lower()
     agg_strategy = context.run_config.get("agg-strategy", "fedavg").lower()
     selected_model = context.run_config.get("model", "CNN").lower()
-    use_yogi = context.run_config.get("yogi-server", 0) == 1
-    use_adam = context.run_config.get("adam-server", 0) == 1
     group_norm = context.run_config.get("group-norm", 0) == 1
     seed = context.run_config.get("seed", 42)
     proximal_mu = context.run_config.get("proximal-mu", 0.0)
@@ -140,11 +137,10 @@ def server_fn(context: Context):
         "learning-rate", 0.1
     )
     cli_strategy = context.run_config.get("cli-strategy", "fedavg").lower()
-    gamma = context.run_config.get("gamma", 1.0)
-    tau = context.run_config.get("lambda", 1.0)
     client_acc_file = context.run_config.get("client-acc-file", "client-accs")
     client_acc_file = f"{client_acc_file}-seed-{seed}.txt"
     q_param = context.run_config.get("qparam", 0.1)
+    save_model = context.run_config.get("save-params", 0) == 1
 
     random.seed(seed)
     torch.manual_seed(seed)
@@ -181,20 +177,8 @@ def server_fn(context: Context):
             dataset=dataset,
             seed=seed,
             proximal_mu=proximal_mu,
-        )
-    elif agg_strategy == "adafed":
-        strategy = AdaFed(
-            **base_kwargs,
-            use_yogi=use_yogi,
-            use_adam=use_adam,
-            proximal_mu=proximal_mu,
-            cli_strategy=cli_strategy,
-            model_type=selected_model,
-            dataset=dataset,
-            seed=seed,
-            lr=lr,
-            gamma=gamma,
-            tau=tau,
+            num_rounds=num_rounds,
+            save_model=save_model,
         )
     elif agg_strategy in ["fedyogi", "yogi"]:
         strategy = CustomFedYogi(
@@ -205,6 +189,8 @@ def server_fn(context: Context):
             model_type=selected_model,
             dataset=dataset,
             seed=seed,
+            num_rounds=num_rounds,
+            save_model=save_model,
         )
     elif agg_strategy in ["qfedavg", "qffl"]:
         strategy = CustomQFedAvg(
@@ -214,6 +200,8 @@ def server_fn(context: Context):
             seed=seed,
             q_param=q_param,
             qffl_learning_rate=lr,
+            num_rounds=num_rounds,
+            save_model=save_model,
         )
     else:
         strategy = CustomFedAvg(
@@ -222,6 +210,8 @@ def server_fn(context: Context):
             dataset=dataset,
             seed=seed,
             num_rounds=num_rounds,
+            cli_strategy=cli_strategy,
+            save_model=save_model,
         )
 
     config = ServerConfig(num_rounds=num_rounds)
