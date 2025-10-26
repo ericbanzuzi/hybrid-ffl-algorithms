@@ -136,6 +136,7 @@ def server_fn(context: Context):
     lr = context.run_config.get("agg-learning-rate") or context.run_config.get(
         "learning-rate", 0.1
     )
+    lr_l = context.run_config.get("learning-rate", 0.1)
     cli_strategy = context.run_config.get("cli-strategy", "fedavg").lower()
     client_acc_file = context.run_config.get("client-acc-file", "client-accs")
     client_acc_file = f"{client_acc_file}-seed-{seed}.txt"
@@ -184,6 +185,7 @@ def server_fn(context: Context):
         strategy = CustomFedYogi(
             **base_kwargs,
             eta=lr,
+            eta_l=lr_l,
             proximal_mu=proximal_mu,
             cli_strategy=cli_strategy,
             model_type=selected_model,

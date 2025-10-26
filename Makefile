@@ -27,6 +27,9 @@ fedavg-femnist-experiment:
 qfedavg-femnist-experiment:
 	@SEED=$(seed) ./experiments/qfedavg-femnist.sh
 
+fedyogi-femnist-experiment:
+	@SEED=$(seed) ./experiments/fedyogi-femnist.sh
+
 fedavg-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar.sh > output.log 2>&1 &
 
