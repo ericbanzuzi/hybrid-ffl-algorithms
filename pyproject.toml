@@ -31,6 +31,7 @@ clientapp = "src.client:app"
 num-server-rounds = 5
 fraction-fit = 1
 local-epochs = 1
+local-iterations = 1
 fraction-evaluate = 1
 learning-rate = 0.01
 agg-learning-rate = 0.1

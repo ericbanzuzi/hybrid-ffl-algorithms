@@ -89,7 +89,7 @@ def train(
                 total_loss += loss.item()
                 total_correct += (outputs.argmax(1) == labels).sum().item()
 
-            if cli_strategy == "ditto":
+            if cli_strategy == "ditto" and local_iterations >= epochs:
                 personal_optimizer.zero_grad()
                 outputs = personal_net(images)
                 loss = criterion(outputs, labels)
@@ -107,6 +107,28 @@ def train(
         # Send back latest avg train loss and accuracy
         train_loss = total_loss / len(trainloader)
         train_acc = total_correct / len(trainloader.dataset)
+
+    # In case ditto is used for more than one epoch
+    if cli_strategy == "ditto" and local_iterations > epochs:
+        for i in range(local_iterations - epochs):
+            total_personal_loss = 0
+            for batch in trainloader:
+                images = batch["img"].to(device)
+                labels = batch["label"].to(device)
+
+                personal_optimizer.zero_grad()
+                outputs = personal_net(images)
+                loss = criterion(outputs, labels)
+
+                # proximal regularization term: λ/2 * ||v_k - w_t||^2
+                prox_term = 0.0
+                for p_local, p_global in zip(personal_net.parameters(), global_params):
+                    prox_term += torch.norm(p_local - p_global) ** 2
+                loss += (lam / 2) * prox_term
+
+                loss.backward()
+                personal_optimizer.step()
+                total_personal_loss += loss.item()
 
     val_loss, val_acc = test(net, valloader, device)
 
@@ -143,3 +165,61 @@ def test(net, testloader: DataLoader, device):
     accuracy = correct / len(testloader.dataset)
     loss = loss / len(testloader)
     return loss, accuracy
+
+
+def finetune(
+    global_net,
+    personal_net,
+    trainloader: DataLoader,
+    valloader: DataLoader,
+    learning_rate: float,
+    device,
+    epochs: int = 1,
+    momentum: float = 0.0,
+    lam: float = 1.0,
+):
+    """Finetune the model on the training set using alternative Ditto."""
+
+    # Ditto: maintain personalized model copy and optimizer
+    global_params = [p.clone().detach() for p in global_net.parameters()]
+    criterion = torch.nn.CrossEntropyLoss().to(device)
+    personal_optimizer = torch.optim.SGD(
+        personal_net.parameters(), lr=learning_rate, momentum=momentum
+    )
+
+    personal_net.to(device)
+    personal_net.train()
+    for i in range(epochs):
+        total_loss = 0
+        total_correct = 0
+        for batch in trainloader:
+            images = batch["img"].to(device)
+            labels = batch["label"].to(device)
+
+            personal_optimizer.zero_grad()
+            outputs = personal_net(images)
+            loss = criterion(outputs, labels)
+
+            # proximal regularization term: λ/2 * ||v_k - w_t||^2
+            prox_term = 0.0
+            for p_local, p_global in zip(personal_net.parameters(), global_params):
+                prox_term += torch.norm(p_local - p_global) ** 2
+            loss += (lam / 2) * prox_term
+
+            loss.backward()
+            personal_optimizer.step()
+            total_loss += loss.item()
+
+        # Send back latest avg train loss and accuracy
+        train_loss = total_loss / len(trainloader)
+        train_acc = total_correct / len(trainloader.dataset)
+
+    val_loss, val_acc = test(personal_net, valloader, device)
+
+    results = {
+        "train-loss": train_loss,
+        "train-accuracy": train_acc,
+        "val-loss": val_loss,
+        "val-accuracy": val_acc,
+    }
+    return results
