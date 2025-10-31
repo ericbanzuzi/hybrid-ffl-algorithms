@@ -47,3 +47,6 @@ fedavg-text-experiment:
 
 qfedavg-text-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/qfedavg-text.sh > output.log 2>&1 &
+
+fedyogi-text-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/fedyogi-text.sh > output.log 2>&1 &
