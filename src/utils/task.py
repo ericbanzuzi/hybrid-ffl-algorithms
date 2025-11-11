@@ -42,9 +42,10 @@ def train(
     net.to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
+    finetuning = True if "finetuning" in cli_strategy else False
 
     # Ditto: maintain personalized model copy and optimizer
-    if cli_strategy == "ditto":
+    if "ditto" in cli_strategy:
         global_params = [p.clone().detach() for p in net.parameters()]
         personal_net.to(device)
         personal_optimizer = torch.optim.SGD(
@@ -67,7 +68,7 @@ def train(
             images = batch["img"].to(device)
             labels = batch["label"].to(device)
 
-            if cli_strategy == "fedprox":
+            if "fedprox" in cli_strategy:
                 optimizer.zero_grad()
                 outputs = net(images)
                 loss = criterion(outputs, labels)
@@ -89,7 +90,11 @@ def train(
                 total_loss += loss.item()
                 total_correct += (outputs.argmax(1) == labels).sum().item()
 
-            if cli_strategy == "ditto" and local_iterations >= epochs:
+            if (
+                "ditto" in cli_strategy
+                and local_iterations >= epochs
+                and not finetuning
+            ):
                 personal_optimizer.zero_grad()
                 outputs = personal_net(images)
                 loss = criterion(outputs, labels)
@@ -109,7 +114,7 @@ def train(
         train_acc = total_correct / len(trainloader.dataset)
 
     # In case ditto is used for more than one epoch
-    if cli_strategy == "ditto" and local_iterations > epochs:
+    if "ditto" in cli_strategy and local_iterations > epochs and not finetuning:
         for i in range(local_iterations - epochs):
             total_personal_loss = 0
             for batch in trainloader:

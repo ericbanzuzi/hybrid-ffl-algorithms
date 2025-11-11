@@ -28,28 +28,25 @@ serverapp = "src.server:app"
 clientapp = "src.client:app"
 
 [tool.flwr.app.config]
-num-server-rounds = 5
-fraction-fit = 1
+num-server-rounds = 100
+fraction-fit = 0.1
 local-epochs = 1
 local-iterations = 1
 fraction-evaluate = 1
-learning-rate = 0.01
+learning-rate = 0.1
 agg-learning-rate = 0.1
 batch-size = 32
-dataset = "cifar10"
+dataset = "femnist"
 agg-strategy = "fedavg"
 cli-strategy = "fedavg"
 proximal-mu = 0.1
-model = "cnncifar"
-yogi-server = 0
-adam-server = 0
+model = "cnn"
 seed = 123
-gamma = 1
 lambda = 1
 group-norm = 1
 store-client-accs = 1
 client-acc-file = "fedavg-cifar10-accs"
-qparam=0.1
+qparam = 0.1
 
 [tool.flwr.federations]
 default = "local-simulation"

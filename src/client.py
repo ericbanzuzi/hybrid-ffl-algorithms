@@ -29,16 +29,21 @@ class FlowerClient(NumPyClient):
         lam: float = 1.0,
         local_iterations: int = 1,
         context: Context = None,
+        seed: int = 42,
     ):
         """Initialize the client with data loaders, hyperparameters, and model."""
         self.client_state = context.state
         if net_type == "resnet18":
+            # torch.manual_seed(seed)
             self.net = ResNet18(dataset=dataset, BN_to_GN=group_norm)
         elif net_type in ["rnn", "lstm"] or dataset in ["shakespeare"]:
+            # torch.manual_seed(seed)
             self.net = ShakespeareLSTM()
         elif net_type == "cnn-cifar":
+            # torch.manual_seed(seed)
             self.net = CNNCifar(dataset=dataset)
         else:
+            # torch.manual_seed(seed)
             self.net = CNN(dataset=dataset)
 
         self.trainloader = trainloader
@@ -73,11 +78,14 @@ class FlowerClient(NumPyClient):
         """Train the model with data of this client."""
         set_weights(self.net, parameters)
 
-        if self.strategy == "ditto":
-            personal_weights = self.client_state.array_records[
-                "personal_net"
-            ].to_numpy_ndarrays()
-            set_weights(self.personal_net, personal_weights)
+        if "ditto" in self.strategy:
+            if "finetuning" in self.strategy:
+                pass
+            else:
+                personal_weights = self.client_state.array_records[
+                    "personal_net"
+                ].to_numpy_ndarrays()
+                set_weights(self.personal_net, personal_weights)
 
         results = train(
             net=self.net,
@@ -95,18 +103,21 @@ class FlowerClient(NumPyClient):
             local_iterations=self.local_iterations,
         )
 
-        if self.strategy == "ditto":
-            # after updating personal_net inside train()
-            self.client_state.array_records[
-                "personal_net"
-            ] = ArrayRecord.from_numpy_ndarrays(get_weights(self.personal_net))
+        if "ditto" in self.strategy:
+            if "finetuning" in self.strategy:
+                pass
+            else:
+                # after updating personal_net inside train()
+                self.client_state.array_records[
+                    "personal_net"
+                ] = ArrayRecord.from_numpy_ndarrays(get_weights(self.personal_net))
 
         return get_weights(self.net), len(self.trainloader.dataset), results
 
     def evaluate(self, parameters, config):
         """Evaluate the model on the data this client has."""
         if "ditto" in self.strategy:
-            if self.strategy == "ditto-finetuning":
+            if "finetuning" in self.strategy:
                 set_weights(self.personal_net, parameters)
                 finetune(
                     global_net=self.net,
@@ -175,6 +186,7 @@ def client_fn(context: Context):
         lam=lam,
         local_iterations=local_iterations,
         context=context,
+        seed=seed,
     ).to_client()
 
 

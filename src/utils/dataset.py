@@ -70,7 +70,6 @@ def load_data(
     # --- CIFAR10 ---
     if dataset.lower() == "cifar10":
         if fds is None:
-            print("[INFO] Loading CIFAR10 dataset...")
             fds = FederatedDataset(
                 dataset="uoft-cs/cifar10",
                 partitioners={
@@ -88,7 +87,6 @@ def load_data(
                     ),
                 },
             )
-            print("[INFO] CIFAR10 dataset loaded.")
 
         transforms = Compose(
             [
