@@ -4,14 +4,18 @@ import numpy as np
 
 # List of seeds
 seeds = [0, 1, 12345]
-base_path = "./experiment-results/femnist-cnn"
+base_paths = [
+    "./experiment-results/femnist-cnn",
+    "./experiment-results/cifar10-cnn-cifar",
+    "./experiment-results/shakespeare-lstm",
+]
 
 # Store all best metrics
 all_best_metrics = []
 best_rounds = {}
 
 for seed in seeds:
-    file_path = f"{base_path}/qfedavg-results-seed-{seed}.json"
+    file_path = f"{base_paths[0]}/fedavg-results-seed-{seed}.json"
 
     # Load JSON file
     with open(file_path, "r") as f:
