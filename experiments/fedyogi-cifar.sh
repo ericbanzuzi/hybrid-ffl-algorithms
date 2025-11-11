@@ -24,7 +24,7 @@ learning-rate=0.0316 \
 fraction-fit=1 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-client-acc-file="fedyogi-cifar10-accs-cnn-cifar"'
+client-acc-file="cifar10/fedyogi-cifar10-accs-cnn-cifar"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

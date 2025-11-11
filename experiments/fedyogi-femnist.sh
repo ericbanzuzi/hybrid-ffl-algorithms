@@ -18,13 +18,13 @@ agg-strategy="fedyogi" \
 cli-strategy="fedavg" \
 dataset="femnist" \
 model="cnn" \
-batch-size=32 \
-agg-learning-rate=0.01  \
-learning-rate=0.0316 \
+batch-size=20 \
+agg-learning-rate=0.00316  \
+learning-rate=0.1 \
 fraction-fit=0.03 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-client-acc-file="fedyogi-femnist-accs"'
+client-acc-file="femnist/fedyogi-femnist-accs"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

@@ -24,8 +24,8 @@ agg-learning-rate=0.01 \
 fraction-fit=1 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-qparam = 10 \
-client-acc-file="qfedavg-cifar10-accs-cnn-cifar-q10"'
+qparam=10 \
+client-acc-file="cifar10/qfedavg-cifar10-accs-cnn-cifar-q10"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

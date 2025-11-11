@@ -24,8 +24,8 @@ agg-learning-rate=0.8 \
 fraction-fit=0.33 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-qparam = 0.001 \
-client-acc-file="qfedavg-text-accs-q001"'
+qparam=0.001 \
+client-acc-file="shakespeare/qfedavg-text-accs-q001"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

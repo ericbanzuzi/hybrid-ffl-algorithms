@@ -23,7 +23,7 @@ learning-rate=0.8 \
 fraction-fit=0.33 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-client-acc-file="fedavg-text-accs"'
+client-acc-file="shakespeare/fedavg-text-accs"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

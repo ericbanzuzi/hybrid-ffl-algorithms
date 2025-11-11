@@ -24,7 +24,7 @@ agg-learning-rate=0.01 \
 fraction-fit=0.33 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-client-acc-file="fedyogi-text-accs"'
+client-acc-file="shakespeare/fedyogi-text-accs"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

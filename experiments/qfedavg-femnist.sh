@@ -18,14 +18,14 @@ agg-strategy="qfedavg" \
 cli-strategy="fedavg" \
 dataset="femnist" \
 model="cnn" \
-batch-size=32 \
+batch-size=20 \
 learning-rate=0.1 \
-agg-learning-rate=0.01 \
+agg-learning-rate=0.1 \
 fraction-fit=0.03 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-qparam = 0.1 \
-client-acc-file="qfedavg-femnist-accs"'
+qparam=0.1 \
+client-acc-file="femnist/qfedavg-femnist-accs"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

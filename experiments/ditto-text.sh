@@ -16,21 +16,21 @@ RUN_CONFIG='\
 num-server-rounds=500 \
 agg-strategy="fedavg" \
 cli-strategy="ditto" \
-dataset="femnist" \
-model="cnn" \
-batch-size=20 \
-learning-rate=0.1 \
+dataset="shakespeare" \
+model="lstm" \
+batch-size=10 \
+learning-rate=0.8 \
 local-epochs=1 \
 local-iterations=1 \
-lambda=1 \
-fraction-fit=0.03 \
+lambda=0.1 \
+fraction-fit=0.33 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-client-acc-file="femnist/ditto-femnist-accs"'
+client-acc-file="shakespeare/ditto-text-accs"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do
-  echo "🔁 Running Ditto on FEMNIST with seed=$SEED_VAL"
-  flwr run . femnist-sim --run-config "$RUN_CONFIG seed=$SEED_VAL"
+  echo "🔁 Running Ditto on SHAKESPEARE with seed=$SEED_VAL"
+  flwr run . text-sim --run-config "$RUN_CONFIG seed=$SEED_VAL"
   echo "✅ Experiment completed for seed=$SEED_VAL!"
 done

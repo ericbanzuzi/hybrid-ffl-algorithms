@@ -23,7 +23,7 @@ learning-rate=0.01 \
 fraction-fit=1 \
 fraction-evaluate=1 \
 store-client-accs=1 \
-client-acc-file="fedavg-cifar10-accs-cnn-cifar"'
+client-acc-file="cifar10/fedavg-cifar10-accs-cnn-cifar"'
 
 # Loop through each seed and run sequentially
 for SEED_VAL in "${SEEDS[@]}"; do

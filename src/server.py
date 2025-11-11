@@ -65,7 +65,11 @@ def eval_metrics_aggregator(
         best_10_mean = np.mean(sorted_acc[-n10:])
 
         if store_client_accs:
-            os.makedirs("./accuracies/", exist_ok=True)
+            if "/" in file_name:
+                folder_name = file_name.split("/")[0]
+                os.makedirs(f"./accuracies/{folder_name}/", exist_ok=True)
+            else:
+                os.makedirs("./accuracies/", exist_ok=True)
             with open(f"./accuracies/{file_name}", "a") as file:
                 np.savetxt(file, accuracies.reshape(1, -1), delimiter=",")
 
