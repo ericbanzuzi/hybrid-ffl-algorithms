@@ -21,6 +21,7 @@ login:
 wandb-key:
 	@echo $(WANDB_KEY)
 
+# FEMNIST EXPERIMENTS
 fedavg-femnist-experiment:
 	@SEED=$(seed) ./experiments/fedavg-femnist.sh
 
@@ -39,6 +40,7 @@ ditto-femnist-experiment:
 fedproxyogi-femnist-experiment:
 	@SEED=$(seed) ./experiments/fedproxyogi-femnist.sh
 
+# CIFAR-10 EXPERIMENTS
 fedavg-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar.sh > output.log 2>&1 &
 
@@ -57,6 +59,7 @@ ditto-cifar-experiment:
 fedproxyogi-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedproxyogi-cifar.sh > output.log 2>&1 &
 
+# TEXT EXPERIMENTS
 fedavg-text-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-text.sh > output.log 2>&1 &
 
