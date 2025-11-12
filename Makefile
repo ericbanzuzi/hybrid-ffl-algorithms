@@ -59,6 +59,12 @@ ditto-cifar-experiment:
 fedproxyogi-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedproxyogi-cifar.sh > output.log 2>&1 &
 
+fedyogiditto-cifar-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/fedyogiditto-cifar.sh > output.log 2>&1 &
+
+fedproxditto-cifar-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/fedproxditto-cifar.sh > output.log 2>&1 &
+
 # TEXT EXPERIMENTS
 fedavg-text-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-text.sh > output.log 2>&1 &
