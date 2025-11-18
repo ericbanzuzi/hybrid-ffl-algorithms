@@ -126,6 +126,15 @@ def aggregate_fit_metrics(
     }
 
 
+# def on_fit_config(server_round: int) -> Metrics:
+#     """Adjusts learning rate based on current round for CIFAR-10."""
+#     lr = 0.01
+#     # Appply a simple learning rate decay
+#     if server_round > 2:
+#         lr = lr * 0.99
+#     return {"lr": lr}
+
+
 def server_fn(context: Context):
     """Construct components that set the ServerApp behaviour."""
 

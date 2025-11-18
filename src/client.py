@@ -164,11 +164,22 @@ def client_fn(context: Context):
     proximal_mu = context.run_config.get("proximal-mu", 0.0)
     qffl = context.run_config.get("agg-strategy") in ["qffl", "qfedavg"]
     lam = context.run_config.get("lambda", 1)
+    dir_alpha = context.run_config.get("dir-alpha", 0.5)
+    use_shards = context.run_config.get("use-shards", 0) == 1
+    num_malicious_clients = context.run_config.get("num-malicious-clients", 0)
 
     random.seed(seed)
     torch.manual_seed(seed)
     trainloader, valloader = load_data(
-        partition_id, num_partitions, batch_size, dataset, seed, hparam_tuning
+        partition_id=partition_id,
+        num_partitions=num_partitions,
+        batch_size=batch_size,
+        dataset=dataset,
+        seed=seed,
+        hparam_tuning=hparam_tuning,
+        num_malicious_clients=num_malicious_clients,
+        dir_alpha=dir_alpha,
+        use_shards=use_shards,
     )
 
     # Return Client instance

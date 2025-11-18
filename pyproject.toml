@@ -45,8 +45,11 @@ seed = 123
 lambda = 1
 group-norm = 1
 store-client-accs = 1
-client-acc-file = "fedavg-cifar10-accs"
+client-acc-file = "fedavg-femnist-accs"
 qparam = 0.1
+dir-alpha = 0.5
+use-shards = 0
+num-malicious-clients = 0
 
 [tool.flwr.federations]
 default = "local-simulation"
@@ -69,5 +72,10 @@ options.backend.client-resources.num-gpus = 0.1 # at most 5 ClientApp will run i
 
 [tool.flwr.federations.text-sim]
 options.num-supernodes = 31  # number of clients
+options.backend.client-resources.num-cpus = 1 # each ClientApp assumes to use 2CPUs
+options.backend.client-resources.num-gpus = 0.1 # at most 5 ClientApp will run in a given GPU
+
+[tool.flwr.federations.cifar10-sim2]
+options.num-supernodes = 100  # number of clients
 options.backend.client-resources.num-cpus = 1 # each ClientApp assumes to use 2CPUs
 options.backend.client-resources.num-gpus = 0.1 # at most 5 ClientApp will run in a given GPU

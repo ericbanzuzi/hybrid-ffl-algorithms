@@ -3,7 +3,11 @@ import warnings
 
 import torch
 from flwr_datasets import FederatedDataset
-from flwr_datasets.partitioner import DirichletPartitioner, NaturalIdPartitioner
+from flwr_datasets.partitioner import (
+    DirichletPartitioner,
+    NaturalIdPartitioner,
+    ShardPartitioner,
+)
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor
 
@@ -60,6 +64,8 @@ def load_data(
     seed: int = 42,
     hparam_tuning: bool = False,
     num_malicious_clients: int = 0,
+    dir_alpha: float = 0.5,
+    use_shards: bool = False,
 ):
     """Load partition (train/test) for CIFAR10, FEMNIST, or Shakespeare."""
 
@@ -69,20 +75,33 @@ def load_data(
 
     # --- CIFAR10 ---
     if dataset.lower() == "cifar10":
-        if fds is None:
+        if fds is None and not use_shards:
             fds = FederatedDataset(
                 dataset="uoft-cs/cifar10",
                 partitioners={
                     "train": DirichletPartitioner(
                         partition_by="label",
                         num_partitions=num_partitions,
-                        alpha=0.5,
+                        alpha=dir_alpha,
                         seed=seed,
                     ),
                     "test": DirichletPartitioner(
                         partition_by="label",
                         num_partitions=num_partitions,
-                        alpha=0.5,
+                        alpha=dir_alpha,
+                        seed=seed,
+                    ),
+                },
+            )
+        elif fds is None and use_shards:
+            fds = FederatedDataset(
+                dataset="uoft-cs/cifar10",
+                partitioners={
+                    "train": ShardPartitioner(
+                        partition_by="label",
+                        num_partitions=num_partitions,
+                        shard_size=100,
+                        num_shards_per_partition=5,
                         seed=seed,
                     ),
                 },
@@ -101,7 +120,7 @@ def load_data(
             batch["img"] = [transforms(img) for img in batch["img"]]
             return batch
 
-        if hparam_tuning:
+        if hparam_tuning or use_shards:
             train_partition = fds.load_partition(partition_id, "train").with_transform(
                 apply_transforms
             )

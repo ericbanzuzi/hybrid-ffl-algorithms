@@ -40,7 +40,7 @@ ditto-femnist-experiment:
 fedproxyogi-femnist-experiment:
 	@SEED=$(seed) ./experiments/fedproxyogi-femnist.sh
 
-# CIFAR-10 EXPERIMENTS
+# CIFAR-10 cross-silo EXPERIMENTS
 fedavg-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar.sh > output.log 2>&1 &
 
@@ -65,6 +65,9 @@ fedyogiditto-cifar-experiment:
 fedproxditto-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedproxditto-cifar.sh > output.log 2>&1 &
 
+fedproxyogiditto-cifar-experiment:
+	@nohup env SEED=$(seed) bash ./experiments/fedproxyogiditto-cifar.sh > output.log 2>&1 &
+
 # TEXT EXPERIMENTS
 fedavg-text-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-text.sh > output.log 2>&1 &
@@ -86,3 +89,16 @@ fedproxyogi-text-experiment:
 
 fedyogiditto-text-experiment:
 	@nohup env SEED=$(seed) ./experiments/fedyogiditto-text.sh > output.log 2>&1 &
+
+fedproxditto-text-experiment:
+	@nohup env SEED=$(seed) ./experiments/fedproxditto-text.sh > output.log 2>&1 &
+
+fedproxyogiditto-text-experiment:
+	@nohup env SEED=$(seed) ./experiments/fedproxyogiditto-text.sh > output.log 2>&1 &
+
+# CIFAR-10 cross-device EXPERIMENTS
+fedavg-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar-cd.sh > output.log 2>&1 &
+
+fedprox-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/fedprox-cifar-cd.sh > output2.log 2>&1 &
