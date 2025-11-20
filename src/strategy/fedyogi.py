@@ -187,7 +187,7 @@ class CustomFedYogi(FedOpt):
 
         # Save metrics as json
         with open(
-            f"{self.results_dir}/fedyogi-{self.cli_strategy}-results-seed-{self.seed}.json",
+            f"{self.results_dir}/fedyogi-{self.cli_strategy}-results-seed-{self.seed}-{self.proximal_mu}.json",
             "w",
         ) as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
@@ -255,7 +255,7 @@ class CustomFedYogi(FedOpt):
 
         # Save metrics as json
         with open(
-            f"{self.results_dir}/fedyogi-{self.cli_strategy}-results-seed-{self.seed}.json",
+            f"{self.results_dir}/fedyogi-{self.cli_strategy}-results-seed-{self.seed}-{self.proximal_mu}.json",
             "w",
         ) as json_file:
             json.dump(self.results_to_save, json_file, indent=4)

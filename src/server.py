@@ -193,6 +193,7 @@ def server_fn(context: Context):
             proximal_mu=proximal_mu,
             num_rounds=num_rounds,
             save_model=save_model,
+            cli_strategy=cli_strategy,
         )
     elif agg_strategy in ["fedyogi", "yogi"]:
         strategy = CustomFedYogi(

@@ -40,6 +40,15 @@ ditto-femnist-experiment:
 fedproxyogi-femnist-experiment:
 	@SEED=$(seed) ./experiments/fedproxyogi-femnist.sh
 
+fedproxditto-femnist-experiment:
+	@SEED=$(seed) ./experiments/fedproxditto-femnist.sh
+
+fedyogiditto-femnist-experiment:
+	@SEED=$(seed) ./experiments/fedyogiditto-femnist.sh
+
+fedproxyogiditto-femnist-experiment:
+	@SEED=$(seed) ./experiments/fedproxyogiditto-femnist.sh
+
 # CIFAR-10 cross-silo EXPERIMENTS
 fedavg-cifar-experiment:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar.sh > output.log 2>&1 &

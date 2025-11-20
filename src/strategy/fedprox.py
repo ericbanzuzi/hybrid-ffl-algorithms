@@ -36,6 +36,7 @@ class CustomFedProx(FedProx):
         seed: int = 42,
         num_rounds: int = None,
         save_model: bool = False,
+        cli_strategy: str = "fedprox",
         *args,
         **kwargs,
     ):
@@ -45,14 +46,20 @@ class CustomFedProx(FedProx):
         self.results_to_save = {}
 
         # Log those same metrics to W&B
-        project = f"fedprox-{dataset}-{model_type}"
-        wandb.init(project=project, name=f"fedprox-seed-{seed}")
+        if cli_strategy != "fedprox":
+            project = f"fedprox-{cli_strategy}-{dataset}-{model_type}"
+            wandb.init(project=project, name=f"fedprox-{cli_strategy}-seed-{seed}")
+        else:
+            project = f"fedprox-{dataset}-{model_type}"
+            wandb.init(project=project, name=f"fedprox-seed-{seed}")
+
         self.model_type = model_type
         self.dataset = dataset
         self.best_acc_so_far = 0.0  # Track best accuracy to save model checkpoints
         self.seed = seed
         self.num_rounds = num_rounds
         self.save_model = save_model
+        self.cli_strategy = cli_strategy
 
         self.results_dir = f"./experiment-results/{dataset}-{model_type}/"
         if not os.path.exists(self.results_dir):
@@ -118,9 +125,11 @@ class CustomFedProx(FedProx):
         self.results_to_save[server_round] = my_results
 
         # Save metrics as json
-        with open(
-            f"{self.results_dir}/fedprox-results-seed-{self.seed}.json", "w"
-        ) as json_file:
+        if self.cli_strategy != "fedprox":
+            json_path = f"{self.results_dir}/fedprox-{self.cli_strategy}-results-seed-{self.seed}.json"
+        else:
+            json_path = f"{self.results_dir}/fedprox-results-seed-{self.seed}.json"
+        with open(json_path, "w") as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 
         # Log metrics to W&B
@@ -186,9 +195,11 @@ class CustomFedProx(FedProx):
         }
 
         # Save metrics as json
-        with open(
-            f"{self.results_dir}/fedprox-results-seed-{self.seed}.json", "w"
-        ) as json_file:
+        if self.cli_strategy != "fedprox":
+            json_path = f"{self.results_dir}/fedprox-{self.cli_strategy}-results-seed-{self.seed}.json"
+        else:
+            json_path = f"{self.results_dir}/fedprox-results-seed-{self.seed}.json"
+        with open(json_path, "w") as json_file:
             json.dump(self.results_to_save, json_file, indent=4)
 
         # Log metrics to W&B
