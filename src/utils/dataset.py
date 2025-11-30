@@ -2,10 +2,12 @@ import random
 import warnings
 
 import torch
+from datasets import concatenate_datasets
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import (
     DirichletPartitioner,
     NaturalIdPartitioner,
+    PathologicalPartitioner,
     ShardPartitioner,
 )
 from torch.utils.data import DataLoader
@@ -56,6 +58,58 @@ def prepare_femnist_fds(num_partitions: int = 500, seed: int = 42):
     return base_fds, {i: cid for i, cid in enumerate(selected_ids)}
 
 
+def prepare_femnist_fds_skewed(
+    num_partitions: int = 100,
+    seed: int = 42,
+    num_base_clients: int = 355,
+    num_classes_per_partition: int = 5,
+):
+    """Prepares the FEMNIST dataset for experiments in SKEWED manner
+    NOTE: This function requires a lot of memory since it materializes multiple writers' data!
+    """
+
+    # 1. Initialize Natural Partition (To select specific writers)
+    base_fds = FederatedDataset(
+        dataset="flwrlabs/femnist",
+        partitioners={"train": NaturalIdPartitioner(partition_by="writer_id")},
+    )
+
+    # 2. Get all available partitions and select the subsets of writers
+    all_ids = range(base_fds.partitioners["train"].num_partitions)
+    random.seed(seed)
+    selected_ids = random.sample(all_ids, num_base_clients)
+
+    # A. Load the actual data from the selected writers
+    # We have to materialize the data here to reshuffle it
+    writer_partitions = []
+    for writer_node_id in selected_ids:
+        # Load the specific writer's data
+        writer_partitions.append(base_fds.load_partition(writer_node_id))
+
+    # B. Merge into one large pool
+    merged_dataset = concatenate_datasets(writer_partitions)
+
+    # C. Apply PathologicalPartitioner to this pooled data
+    # This ensures we only use data from the selected writers, but distribute
+    # it so every client gets X classes.
+    skewed_partitioner = PathologicalPartitioner(
+        partition_by="character",
+        num_partitions=num_partitions,
+        num_classes_per_partition=num_classes_per_partition,
+        seed=seed,
+    )
+
+    # Assign the merged dataset to the partitioner
+    skewed_partitioner.dataset = merged_dataset
+
+    # D. Return the partitioner as the 'fds' object
+    # The partitioner object has a .load_partition() method, so it mimics fds behavior
+    # The mapping is now 1-to-1 (0->0, 1->1) because we re-generated the partitions
+    new_mapping = {i: i for i in range(num_partitions)}
+
+    return skewed_partitioner, new_mapping
+
+
 def load_data(
     partition_id: int,
     num_partitions: int,
@@ -101,7 +155,7 @@ def load_data(
                         partition_by="label",
                         num_partitions=num_partitions,
                         shard_size=100,
-                        num_shards_per_partition=5,
+                        num_shards_per_partition=(50000 // 100) // num_partitions,
                         seed=seed,
                     ),
                 },
@@ -150,8 +204,12 @@ def load_data(
 
     # --- FEMNIST ---
     elif dataset.lower() == "femnist" or dataset.lower() == "mnist":
-        if fds is None:
+        if fds is None and not use_shards:
             fds, nid_to_cid = prepare_femnist_fds(num_partitions, seed)
+        elif fds is None and use_shards:
+            fds, nid_to_cid = prepare_femnist_fds_skewed(
+                num_partitions, seed, num_base_clients=355, num_classes_per_partition=5
+            )
 
         if num_malicious_clients > 0 and malicious_clients is None:
             # Randomly select malicious clients
@@ -261,5 +319,59 @@ def load_data(
             testloader = DataLoader(partition_train_test["test"], batch_size=batch_size)
 
         return trainloader, testloader
+
+    # --- Fashion-MNIST ---
+    elif dataset.lower() == "fashion" or dataset.lower() == "fashion-mnist":
+        if fds is None:
+            fds = FederatedDataset(
+                dataset="zalando-datasets/fashion_mnist",
+                partitioners={
+                    "train": ShardPartitioner(
+                        partition_by="label",
+                        num_partitions=num_partitions,
+                        shard_size=60,
+                        num_shards_per_partition=(60000 // 60) // num_partitions,
+                        seed=seed,
+                    ),
+                },
+            )
+
+        def apply_transforms(batch):
+            return {
+                "img": [transforms(img) for img in batch["image"]],
+                "label": batch["label"],
+            }
+
+        transforms = Compose(
+            [ToTensor(), Normalize((0.2860,), (0.3530,))]  # Based on Fashion-MNIST data
+        )
+        partition = fds.load_partition(partition_id)
+        # Divide data on each node: 80% train, 20% test
+        partition_train_test = partition.train_test_split(test_size=0.2, seed=seed)
+
+        if hparam_tuning:
+            partition_train = partition_train_test["train"].with_transform(
+                apply_transforms
+            )
+            # Divide data on each node: 80% train, 20% validation
+            partition_train_val = partition_train.train_test_split(
+                test_size=0.2, seed=seed
+            )
+
+            trainloader = DataLoader(
+                partition_train_val["train"], batch_size=batch_size, shuffle=True
+            )
+            testloader = DataLoader(partition_train_val["test"], batch_size=batch_size)
+        else:
+            partition_train_test = partition_train_test.with_transform(apply_transforms)
+            trainloader = DataLoader(
+                partition_train_test["train"],
+                batch_size=batch_size,
+                shuffle=True,
+            )
+            testloader = DataLoader(partition_train_test["test"], batch_size=batch_size)
+
+        return trainloader, testloader
+
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")

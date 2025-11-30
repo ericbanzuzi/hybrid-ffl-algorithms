@@ -6,13 +6,13 @@ from torchinfo import summary
 NUM_CLASSES = {
     "cifar10": 10,
     "femnist": 62,
-    "mnist": 10,
+    "fashion-mnist": 10,
 }
 
 IN_CHANNELS = {
     "cifar10": 3,
     "femnist": 1,
-    "mnist": 1,
+    "fashion-mnist": 1,
 }
 
 
@@ -150,14 +150,14 @@ class CNNMnist(nn.Module):
 
 
 if __name__ == "__main__":
-    print("\nCNN:")
+    print("\nCNN (FEMNIST):")
     summary(CNN(dataset="femnist"), input_size=(1, 1, 28, 28))
 
-    print("\nCNNCifar:")
+    print("\nCNNCifar (CIFAR-10):")
     summary(CNNCifar(dataset="cifar10"), input_size=(1, 3, 32, 32))
 
-    print("\nCNNMnist:")
+    print("\nCNNMnist (FEMNIST):")
     summary(CNNMnist(dataset="femnist"), input_size=(1, 1, 28, 28))
 
-    print("\nSimpleCNN:")
+    print("\nSimpleCNN (CIFAR-10):")
     summary(SimpleCNN(dataset="cifar10"), input_size=(1, 3, 32, 32))

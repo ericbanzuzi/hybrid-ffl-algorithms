@@ -105,9 +105,58 @@ fedproxditto-text-experiment:
 fedproxyogiditto-text-experiment:
 	@nohup env SEED=$(seed) ./experiments/fedproxyogiditto-text.sh > output.log 2>&1 &
 
-# CIFAR-10 cross-device EXPERIMENTS
+# CIFAR-10 cross-device EXPERIMENTS (SKEWED)
 fedavg-cifar-experiment2:
 	@nohup env SEED=$(seed) bash ./experiments/fedavg-cifar-cd.sh > output.log 2>&1 &
 
 fedprox-cifar-experiment2:
-	@nohup env SEED=$(seed) bash ./experiments/fedprox-cifar-cd.sh > output2.log 2>&1 &
+	@nohup env SEED=$(seed) bash ./experiments/fedprox-cifar-cd.sh > output.log 2>&1 &
+
+fedyogi-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/fedyogi-cifar-cd.sh > output.log 2>&1 &
+
+qfedavg-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/qfedavg-cifar-cd.sh > output.log 2>&1 &
+
+ditto-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/ditto-cifar-cd.sh > output.log 2>&1 &
+
+fedproxyogi-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/fedproxyogi-cifar-cd.sh > output.log 2>&1 &
+
+fedproxditto-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/fedproxditto-cifar-cd.sh > output.log 2>&1 &
+
+fedyogiditto-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/fedyogiditto-cifar-cd.sh > output.log 2>&1 &
+
+fedproxyogiditto-cifar-experiment2:
+	@nohup env SEED=$(seed) bash ./experiments/fedproxyogiditto-cifar-cd.sh > output.log 2>&1 &
+
+# FASHION-MNIST SKEWED EXPERIMENTS
+fedavg-fashion-experiment:
+	@SEED=$(seed) ./experiments/fedavg-fashion.sh
+
+fedprox-fashion-experiment:
+	@SEED=$(seed) ./experiments/fedprox-fashion.sh
+
+qfedavg-fashion-experiment:
+	@SEED=$(seed) ./experiments/qfedavg-fashion.sh
+
+fedyogi-fashion-experiment:
+	@SEED=$(seed) ./experiments/fedyogi-fashion.sh
+
+ditto-fashion-experiment:
+	@SEED=$(seed) ./experiments/ditto-fashion.sh
+
+fedproxyogi-fashion-experiment:
+	@SEED=$(seed) ./experiments/fedproxyogi-fashion.sh
+
+fedproxditto-fashion-experiment:
+	@SEED=$(seed) ./experiments/fedproxditto-fashion.sh
+
+fedyogiditto-fashion-experiment:
+	@SEED=$(seed) ./experiments/fedyogiditto-fashion.sh
+
+fedproxyogiditto-fashion-experiment:
+	@SEED=$(seed) ./experiments/fedproxyogiditto-fashion.sh
