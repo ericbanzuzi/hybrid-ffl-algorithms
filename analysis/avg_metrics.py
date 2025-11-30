@@ -3,11 +3,15 @@ import json
 import numpy as np
 
 # List of seeds
+# 0: FEMNIST, 1: CIFAR-10, 2: Shakespeare, 3: Fashion-MNIST, 4: CIFAR-10-CD
+experiment = 0
 seeds = [0, 1, 12345]
 base_paths = [
     "./experiment-results/femnist-cnn",
     "./experiment-results/cifar10-cnn-cifar",
-    "./experiment-results/shakespeare-lstm",
+    "./experiment-results/shakespeare-lstm-vm",
+    "./experiment-results/fashion-mnist-cnn",
+    "./experiment-results/cifar10-cnn-cifar-cd",
 ]
 
 # Store all best metrics
@@ -15,7 +19,7 @@ all_best_metrics = []
 best_rounds = {}
 
 for seed in seeds:
-    file_path = f"{base_paths[0]}/fedavg-results-seed-{seed}.json"
+    file_path = f"{base_paths[experiment]}/fedavg-fedproxditto-results-seed-{seed}.json"
 
     # Load JSON file
     with open(file_path, "r") as f:
@@ -36,22 +40,40 @@ for seed in seeds:
         f"Seed {seed} → Best round: {best_key}, avg-test-accuracy: {best_metrics['avg-test-accuracy']:.4f}"
     )
 
-print("\n--- Average metrics across seeds ---")
+print("\n--- Average metrics across seeds (with standard errors) ---")
 
 # Collect all metric names
 metric_names = all_best_metrics[0].keys()
 
-# Compute average per metric
 avg_metrics = {}
+std_metrics = {}
+se_metrics = {}
+
 for metric in metric_names:
+    # Extract numerical values only
     values = [
         m[metric] for m in all_best_metrics if isinstance(m[metric], (int, float))
     ]
-    avg_metrics[metric] = float(np.mean(values)) if values else None
 
-# Print average metrics
-for metric, value in avg_metrics.items():
-    print(f"{metric}: {value:.6f}" if value is not None else f"{metric}: N/A")
+    if not values:
+        avg_metrics[metric] = None
+        std_metrics[metric] = None
+        se_metrics[metric] = None
+        continue
+
+    values = np.array(values)
+    avg = values.mean()
+    std = values.std(ddof=1) if len(values) > 1 else 0.0  # sample std
+    se = std / np.sqrt(len(values)) if len(values) > 1 else 0.0
+
+    avg_metrics[metric] = avg
+    std_metrics[metric] = std
+    se_metrics[metric] = se
+
+    print(f"{metric}:")
+    print(f"  mean: {avg:.6f}")
+    print(f"  std:  {std:.6f}")
+    print(f"  se:   {se:.6f}")
 
 print("\n--- Best rounds per seed ---")
 for seed, round_ in best_rounds.items():

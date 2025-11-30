@@ -172,6 +172,7 @@ cython_debug/
 
 src/dummy.py
 tutorials
+.DS_Store
 
 # Experiments and logs
 wandb
@@ -179,4 +180,4 @@ experiment-results
 checkpoints
 data
 *.txt
-!analysis/**
+!analysis/table-metrics/**

@@ -1,0 +1,540 @@
+
+=== ALGORITHM: FedAvg ===
+Seed 0 → Best round: 46, avg-test-accuracy: 0.5134
+Seed 1 → Best round: 139, avg-test-accuracy: 0.5104
+Seed 12345 → Best round: 65, avg-test-accuracy: 0.4998
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.502623
+  std:  0.031884
+  se:   0.018408
+std-train-accuracy:
+  mean: 0.037637
+  std:  0.013865
+  se:   0.008005
+avg-train-loss:
+  mean: 1.730010
+  std:  0.111512
+  se:   0.064381
+avg-val-accuracy:
+  mean: 0.475638
+  std:  0.022392
+  se:   0.012928
+std-val-accuracy:
+  mean: 0.040430
+  std:  0.007551
+  se:   0.004360
+avg-val-loss:
+  mean: 1.893266
+  std:  0.084412
+  se:   0.048736
+avg-test-loss:
+  mean: 1.836351
+  std:  0.046072
+  se:   0.026600
+std-test-loss:
+  mean: 0.345314
+  std:  0.145333
+  se:   0.083908
+avg-test-accuracy:
+  mean: 0.507867
+  std:  0.007162
+  se:   0.004135
+std-test-accuracy:
+  mean: 0.064979
+  std:  0.009081
+  se:   0.005243
+worst-10:
+  mean: 0.406061
+  std:  0.028742
+  se:   0.016594
+best-10:
+  mean: 0.651578
+  std:  0.046044
+  se:   0.026584
+
+--- Best rounds per seed ---
+Seed 0: Round 46
+Seed 1: Round 139
+Seed 12345: Round 65
+
+=== ALGORITHM: q-FedAvg ===
+Seed 0 → Best round: 492, avg-test-accuracy: 0.5130
+Seed 1 → Best round: 494, avg-test-accuracy: 0.4998
+Seed 12345 → Best round: 500, avg-test-accuracy: 0.5062
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.551747
+  std:  0.003778
+  se:   0.002181
+std-train-accuracy:
+  mean: 0.041799
+  std:  0.004252
+  se:   0.002455
+avg-train-loss:
+  mean: 1.473589
+  std:  0.027269
+  se:   0.015744
+avg-val-accuracy:
+  mean: 0.464934
+  std:  0.021258
+  se:   0.012273
+std-val-accuracy:
+  mean: 0.076005
+  std:  0.021056
+  se:   0.012156
+avg-val-loss:
+  mean: 2.025369
+  std:  0.169481
+  se:   0.097850
+avg-test-loss:
+  mean: 1.783309
+  std:  0.040631
+  se:   0.023458
+std-test-loss:
+  mean: 0.297198
+  std:  0.132305
+  se:   0.076386
+avg-test-accuracy:
+  mean: 0.506355
+  std:  0.006605
+  se:   0.003813
+std-test-accuracy:
+  mean: 0.063402
+  std:  0.024513
+  se:   0.014153
+worst-10:
+  mean: 0.410015
+  std:  0.026389
+  se:   0.015236
+best-10:
+  mean: 0.652176
+  std:  0.070909
+  se:   0.040939
+
+--- Best rounds per seed ---
+Seed 0: Round 492
+Seed 1: Round 494
+Seed 12345: Round 500
+
+=== ALGORITHM: FedProx ===
+Seed 0 → Best round: 312, avg-test-accuracy: 0.5000
+Seed 1 → Best round: 134, avg-test-accuracy: 0.5037
+Seed 12345 → Best round: 150, avg-test-accuracy: 0.5045
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.521979
+  std:  0.006513
+  se:   0.003760
+std-train-accuracy:
+  mean: 0.048860
+  std:  0.015035
+  se:   0.008680
+avg-train-loss:
+  mean: 2.054478
+  std:  0.036866
+  se:   0.021285
+avg-val-accuracy:
+  mean: 0.461972
+  std:  0.003337
+  se:   0.001927
+std-val-accuracy:
+  mean: 0.069437
+  std:  0.048145
+  se:   0.027796
+avg-val-loss:
+  mean: 2.237106
+  std:  0.275221
+  se:   0.158899
+avg-test-loss:
+  mean: 1.978881
+  std:  0.123351
+  se:   0.071216
+std-test-loss:
+  mean: 0.434122
+  std:  0.181654
+  se:   0.104878
+avg-test-accuracy:
+  mean: 0.502753
+  std:  0.002415
+  se:   0.001394
+std-test-accuracy:
+  mean: 0.085481
+  std:  0.038095
+  se:   0.021994
+worst-10:
+  mean: 0.368557
+  std:  0.051144
+  se:   0.029528
+best-10:
+  mean: 0.690437
+  std:  0.090018
+  se:   0.051972
+
+--- Best rounds per seed ---
+Seed 0: Round 312
+Seed 1: Round 134
+Seed 12345: Round 150
+
+=== ALGORITHM: FedYogi ===
+Seed 0 → Best round: 95, avg-test-accuracy: 0.5018
+Seed 1 → Best round: 241, avg-test-accuracy: 0.5202
+Seed 12345 → Best round: 430, avg-test-accuracy: 0.5051
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.532184
+  std:  0.017973
+  se:   0.010377
+std-train-accuracy:
+  mean: 0.079268
+  std:  0.012345
+  se:   0.007127
+avg-train-loss:
+  mean: 1.681999
+  std:  0.088920
+  se:   0.051338
+avg-val-accuracy:
+  mean: 0.476809
+  std:  0.013547
+  se:   0.007821
+std-val-accuracy:
+  mean: 0.073100
+  std:  0.029765
+  se:   0.017185
+avg-val-loss:
+  mean: 2.197340
+  std:  0.317311
+  se:   0.183200
+avg-test-loss:
+  mean: 1.962263
+  std:  0.091123
+  se:   0.052610
+std-test-loss:
+  mean: 0.495478
+  std:  0.321306
+  se:   0.185506
+avg-test-accuracy:
+  mean: 0.509011
+  std:  0.009825
+  se:   0.005672
+std-test-accuracy:
+  mean: 0.077907
+  std:  0.027988
+  se:   0.016159
+worst-10:
+  mean: 0.395058
+  std:  0.046997
+  se:   0.027134
+best-10:
+  mean: 0.682455
+  std:  0.054813
+  se:   0.031646
+
+--- Best rounds per seed ---
+Seed 0: Round 95
+Seed 1: Round 241
+Seed 12345: Round 430
+
+=== ALGORITHM: Ditto ===
+Seed 0 → Best round: 76, avg-test-accuracy: 0.5076
+Seed 1 → Best round: 44, avg-test-accuracy: 0.5076
+Seed 12345 → Best round: 101, avg-test-accuracy: 0.4995
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.503577
+  std:  0.022836
+  se:   0.013184
+std-train-accuracy:
+  mean: 0.049974
+  std:  0.014219
+  se:   0.008209
+avg-train-loss:
+  mean: 1.701369
+  std:  0.097208
+  se:   0.056123
+avg-val-accuracy:
+  mean: 0.490288
+  std:  0.033840
+  se:   0.019538
+std-val-accuracy:
+  mean: 0.051092
+  std:  0.015177
+  se:   0.008763
+avg-val-loss:
+  mean: 1.916524
+  std:  0.151278
+  se:   0.087341
+avg-test-loss:
+  mean: 1.860813
+  std:  0.095066
+  se:   0.054887
+std-test-loss:
+  mean: 0.350140
+  std:  0.182472
+  se:   0.105350
+avg-test-accuracy:
+  mean: 0.504903
+  std:  0.004662
+  se:   0.002692
+std-test-accuracy:
+  mean: 0.068310
+  std:  0.020009
+  se:   0.011552
+worst-10:
+  mean: 0.402862
+  std:  0.012946
+  se:   0.007474
+best-10:
+  mean: 0.659673
+  std:  0.061465
+  se:   0.035487
+
+--- Best rounds per seed ---
+Seed 0: Round 76
+Seed 1: Round 44
+Seed 12345: Round 101
+
+=== ALGORITHM: FedProxYogi ===
+Seed 0 → Best round: 77, avg-test-accuracy: 0.4998
+Seed 1 → Best round: 128, avg-test-accuracy: 0.5110
+Seed 12345 → Best round: 436, avg-test-accuracy: 0.5026
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.577036
+  std:  0.071199
+  se:   0.041107
+std-train-accuracy:
+  mean: 0.085451
+  std:  0.074471
+  se:   0.042996
+avg-train-loss:
+  mean: 1.669964
+  std:  0.131903
+  se:   0.076154
+avg-val-accuracy:
+  mean: 0.492005
+  std:  0.022861
+  se:   0.013199
+std-val-accuracy:
+  mean: 0.051989
+  std:  0.024414
+  se:   0.014095
+avg-val-loss:
+  mean: 1.975270
+  std:  0.150425
+  se:   0.086848
+avg-test-loss:
+  mean: 1.991271
+  std:  0.117095
+  se:   0.067605
+std-test-loss:
+  mean: 0.335834
+  std:  0.017092
+  se:   0.009868
+avg-test-accuracy:
+  mean: 0.504473
+  std:  0.005831
+  se:   0.003367
+std-test-accuracy:
+  mean: 0.061496
+  std:  0.005925
+  se:   0.003421
+worst-10:
+  mean: 0.411824
+  std:  0.014615
+  se:   0.008438
+best-10:
+  mean: 0.640907
+  std:  0.013725
+  se:   0.007924
+
+--- Best rounds per seed ---
+Seed 0: Round 77
+Seed 1: Round 128
+Seed 12345: Round 436
+
+=== ALGORITHM: FedProxDitto ===
+Seed 0 → Best round: 163, avg-test-accuracy: 0.4946
+Seed 1 → Best round: 126, avg-test-accuracy: 0.5041
+Seed 12345 → Best round: 59, avg-test-accuracy: 0.4925
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.560291
+  std:  0.033202
+  se:   0.019169
+std-train-accuracy:
+  mean: 0.094582
+  std:  0.051588
+  se:   0.029785
+avg-train-loss:
+  mean: 1.777353
+  std:  0.132629
+  se:   0.076573
+avg-val-accuracy:
+  mean: 0.471008
+  std:  0.009435
+  se:   0.005448
+std-val-accuracy:
+  mean: 0.067151
+  std:  0.023928
+  se:   0.013815
+avg-val-loss:
+  mean: 2.104363
+  std:  0.168533
+  se:   0.097303
+avg-test-loss:
+  mean: 1.973677
+  std:  0.131687
+  se:   0.076030
+std-test-loss:
+  mean: 0.425327
+  std:  0.251876
+  se:   0.145421
+avg-test-accuracy:
+  mean: 0.497064
+  std:  0.006164
+  se:   0.003559
+std-test-accuracy:
+  mean: 0.065335
+  std:  0.013665
+  se:   0.007889
+worst-10:
+  mean: 0.372375
+  std:  0.022906
+  se:   0.013225
+best-10:
+  mean: 0.622230
+  std:  0.046409
+  se:   0.026794
+
+--- Best rounds per seed ---
+Seed 0: Round 163
+Seed 1: Round 126
+Seed 12345: Round 59
+
+=== ALGORITHM: FedYogiDitto ===
+Seed 0 → Best round: 450, avg-test-accuracy: 0.5093
+Seed 1 → Best round: 173, avg-test-accuracy: 0.5087
+Seed 12345 → Best round: 456, avg-test-accuracy: 0.5015
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.581832
+  std:  0.035790
+  se:   0.020663
+std-train-accuracy:
+  mean: 0.102160
+  std:  0.021742
+  se:   0.012553
+avg-train-loss:
+  mean: 1.483424
+  std:  0.132567
+  se:   0.076537
+avg-val-accuracy:
+  mean: 0.475819
+  std:  0.011788
+  se:   0.006806
+std-val-accuracy:
+  mean: 0.058616
+  std:  0.017432
+  se:   0.010065
+avg-val-loss:
+  mean: 2.136635
+  std:  0.255743
+  se:   0.147653
+avg-test-loss:
+  mean: 1.990627
+  std:  0.175796
+  se:   0.101496
+std-test-loss:
+  mean: 0.563246
+  std:  0.439405
+  se:   0.253691
+avg-test-accuracy:
+  mean: 0.506519
+  std:  0.004333
+  se:   0.002502
+std-test-accuracy:
+  mean: 0.061090
+  std:  0.012135
+  se:   0.007006
+worst-10:
+  mean: 0.400470
+  std:  0.017036
+  se:   0.009836
+best-10:
+  mean: 0.627403
+  std:  0.032136
+  se:   0.018554
+
+--- Best rounds per seed ---
+Seed 0: Round 450
+Seed 1: Round 173
+Seed 12345: Round 456
+
+=== ALGORITHM: FedProxYogiDitto ===
+Seed 0 → Best round: 321, avg-test-accuracy: 0.4879
+Seed 1 → Best round: 180, avg-test-accuracy: 0.5051
+Seed 12345 → Best round: 370, avg-test-accuracy: 0.4919
+
+--- Average metrics across seeds (with standard errors) ---
+avg-train-accuracy:
+  mean: 0.579762
+  std:  0.060928
+  se:   0.035177
+std-train-accuracy:
+  mean: 0.125695
+  std:  0.047598
+  se:   0.027481
+avg-train-loss:
+  mean: 1.845861
+  std:  0.174470
+  se:   0.100730
+avg-val-accuracy:
+  mean: 0.451056
+  std:  0.009602
+  se:   0.005544
+std-val-accuracy:
+  mean: 0.058968
+  std:  0.005110
+  se:   0.002950
+avg-val-loss:
+  mean: 2.232204
+  std:  0.094939
+  se:   0.054813
+avg-test-loss:
+  mean: 2.154198
+  std:  0.221433
+  se:   0.127845
+std-test-loss:
+  mean: 0.533831
+  std:  0.376279
+  se:   0.217245
+avg-test-accuracy:
+  mean: 0.494950
+  std:  0.008980
+  se:   0.005185
+std-test-accuracy:
+  mean: 0.062211
+  std:  0.001648
+  se:   0.000952
+worst-10:
+  mean: 0.385050
+  std:  0.011222
+  se:   0.006479
+best-10:
+  mean: 0.620292
+  std:  0.007762
+  se:   0.004481
+
+--- Best rounds per seed ---
+Seed 0: Round 321
+Seed 1: Round 180
+Seed 12345: Round 370
