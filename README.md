@@ -1,17 +1,62 @@
-# Federated Learning with PyTorch and Flower
+# HybridFFL: Fair Federated Learning via Client Drift Reduction, Adaptive Optimization and Personalization
 
-TODO: description
+This repository contains the implementation of **HybridFFL**, a Federated Learning (FL) framework designed to improve fairness, scalability, and robustness in distributed neural network training by combining orthogonal FL methods. 
 
-This introductory example to Flower uses PyTorch, but deep knowledge of PyTorch is not necessarily required to run the example. However, it will help you understand how to adapt Flower to your use case. Running this example in itself is quite easy. This example uses [Flower Datasets](https://flower.ai/docs/datasets/) to download, partition and preprocess the CIFAR-10 dataset.
 
-## Set up the project
+## 🚀 Overview
 
-### Clone the project
+**HybridFFL** investigates the orthogonal combination of three state-of-the-art FL techniques to address heterogeneity in cross-device settings:
+1.  **Client Drift Reduction:** Uses **FedProx** to stabilize local updates via proximal regularization.
+2.  **Adaptive Optimization:** Uses **FedYogi** for server-side adaptive learning rates.
+3.  **Personalization:** Uses **Ditto** to train personalized local models alongside the global model.
 
-This will create a new directory called `hybrid-fl-algorithms` with the following structure:
+The framework supports multiple hybrid variations:
+* `FedProxYogi`
+* `FedProxDitto`
+* `FedYogiDitto`
+* `FedProxYogiDitto` (Full Hybrid)
 
+
+## 📊 Datasets
+
+The repository includes setups for four benchmark datasets, covering both image classification and text generation:
+
+| Dataset | Type | Heterogeneity |
+| :--- | :--- | :--- |
+| **FEMNIST** | Image | Natural (Writer ID) |
+| **Fashion-MNIST** | Image | Pathological (Shards) |
+| **CIFAR-10** | Image | Dirichlet / Shards |
+| **Shakespeare** | Text | Natural (Speaking Roles) |
+
+## 🛠️ Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/ericbanzuzi/hybrid-ffl-algorithms.git
+    cd hybrid-ffl-algorithms
+    ```
+
+2.  **Install dependencies:**
+    Install the dependencies defined in `pyproject.toml`:
+
+    ```bash
+    pip install -e .
+    ```
+
+    Or alternatively:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Project structure
+
+The content of the project is structured as follows:
 ```shell
 hybrid-fl-algorithms
+├── analysis
+├── experiments
+├── notebooks
 ├── src
 │   ├── __init__.py
 │   ├── client.py   # Defines the ClientApp
@@ -22,69 +67,43 @@ hybrid-fl-algorithms
 │   ├── strategy    # Contains all aggregation strategies for servers
 │   │   ├── fedavg.py
 │   │   ├── fedprox.py
+│   │   ├── fedyogi.py
+│   │   ├── qfedavg.py
 │   │   └── adafed.py
 │   └── utils
 │   │   ├── dataset.py      # Defines functions for data loading
+│   │   ├── language.py      # Defines functions for text data preprocessing
 │       └── task.py         # Defines functions for training
 ├── pyproject.toml      # Project metadata like dependencies and configs
+├── Makefile      # Useful commands for running things related to the project
 └── README.md
 ```
 
-### Create a virtual environment
+## 🏃 Usage
 
-Using Python:
-```bash
-python3.11 -m venv .venv
-```
+You can run simulations using the main script. The system uses **Weights & Biases** for experiment tracking.
 
-Using conda:
-```bash
-conda create --name fl-env python=3.11
-```
+### Basic Run with the Simulation Engine
 
-### Install dependencies and project
+There exists multiple predefined simulation engine confugrations in `pyproject.toml`, which can be used to run simulations. To make custom setups with different simulations you can create more in a similar fashion.
 
-Install the dependencies defined in `pyproject.toml`:
+To run the full **HybridFFL** (FedProx + Yogi + Ditto) on **FEMNIST**:
 
 ```bash
-pip install -e .
+flwr run . femnist-sim \
+    --run-config '\
+        num-server-rounds=500 \
+        agg-strategy="fedyogi" \
+        cli-strategy="fedproxditto" \
+        dataset="femnist" \
+        model="cnn" \
+        batch-size=20 \
+        agg-learning-rate=0.00316  \
+        learning-rate=0.1 \
+        proximal-mu=0.1 \
+        lambda=1 \
+        fraction-fit=0.03 \
+        fraction-evaluate=1 \
+        store-client-accs=1 \
+        client-acc-file="femnist/fedproxyogiditto-femnist-accs"'
 ```
-
-Or alternatively:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Run the project
-
-You can run your Flower project in both _simulation_ and _deployment_ mode without making changes to the code. If you are starting with Flower, we recommend you using the _simulation_ mode as it requires fewer components to be launched manually. By default, `flwr run` will make use of the Simulation Engine.
-
-### Run with the Simulation Engine
-
-> \[!TIP\]
-> This example might run faster when the `ClientApp`s have access to a GPU. If your system has one, you can make use of it by configuring the `backend.client-resources` component in `pyproject.toml`. If you want to try running the example with GPU right away, use the `local-simulation-gpu` federation as shown below. Check the [Simulation Engine documentation](https://flower.ai/docs/framework/how-to-run-simulations.html) to learn more.
-
-```bash
-# Run with the default federation (CPU only)
-flwr run .
-```
-
-You can also override some of the settings for your `ClientApp` and `ServerApp` defined in `pyproject.toml`. For example:
-
-```bash
-flwr run . --run-config "num-server-rounds=5 learning-rate=0.05"
-```
-
-Run the project in the `local-simulation-gpu` federation that gives CPU and GPU resources to each `ClientApp`. By default, at most 5x`ClientApp` will run in parallel in the available GPU. You can tweak the degree of parallelism by adjusting the settings of this federation in the `pyproject.toml`.
-
-```bash
-# Run with the `local-simulation-gpu` federation
-flwr run . local-simulation-gpu
-```
-
-### Run with the Deployment Engine
-
-Follow this [how-to guide](https://flower.ai/docs/framework/how-to-run-flower-with-deployment-engine.html) to run the same app in this example but with Flower's Deployment Engine. After that, you might be intersted in setting up [secure TLS-enabled communications](https://flower.ai/docs/framework/how-to-enable-tls-connections.html) and [SuperNode authentication](https://flower.ai/docs/framework/how-to-authenticate-supernodes.html) in your federation.
-
-If you are already familiar with how the Deployment Engine works, you may want to learn how to run it using Docker. Check out the [Flower with Docker](https://flower.ai/docs/framework/docker/index.html) documentation.
